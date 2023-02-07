@@ -71,7 +71,8 @@ export async function createTag(
   newTag: string,
   createAnnotatedTag: boolean,
   update: boolean,
-  GITHUB_SHA: string
+  GITHUB_SHA: string,
+  pushTag: boolean = true
 ) {
   const octokit = getOctokitSingleton();
   let annotatedTag:
@@ -88,7 +89,9 @@ export async function createTag(
     });
   }
 
-  if (update) {
+  if (!pushTag) {
+    core.debug(`Tag was not pushed to remote`);
+  } else if (update) {
     core.info(`Updating existing tag ${newTag} on the repo.`);
     await octokit.git.updateRef({
       ...context.repo,
