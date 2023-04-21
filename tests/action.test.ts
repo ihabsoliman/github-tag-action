@@ -709,7 +709,7 @@ describe('github-tag-action', () => {
     beforeEach(() => {
       jest.clearAllMocks();
       setBranch('prerelease');
-      loadDefaultInputs();    
+      loadDefaultInputs();
       setInput('pre_release_branches', 'prerelease');
       setInput('force_prerelease_bump', '');
     });
@@ -978,7 +978,7 @@ describe('github-tag-action', () => {
     });
 
     /**
-     *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0 
+     *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0
      * according to semver, a prerelease increment on a non-prerelease version drafts a new minor version
      */
     it('default_draft_bump defaults to default_prerelease_bump (prerelease)', async () => {
@@ -1014,7 +1014,7 @@ describe('github-tag-action', () => {
        * Then
        */
       expect(mockCreateTag).toHaveBeenCalledWith(
-        'v1.2.4-prerelease.0',  // prerelease drafts patch upgrades
+        'v1.2.4-prerelease.0', // prerelease drafts patch upgrades
         expect.any(Boolean),
         false,
         expect.any(String),
@@ -1024,13 +1024,13 @@ describe('github-tag-action', () => {
     });
 
     /**
-     *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0 
+     *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0
      * according to semver, a prerelease increment on a non-prerelease version drafts a new minor version
      */
     it('default_draft_bump defaults to default_prerelease_bump (preminor)', async () => {
       /*
-        * Given
-        */
+       * Given
+       */
       const commits = [{ message: 'this is a commit', hash: null }];
       jest
         .spyOn(utils, 'getCommits')
@@ -1050,17 +1050,17 @@ describe('github-tag-action', () => {
         .mockImplementation(async () => validTags);
 
       /*
-        * When
-        */
+       * When
+       */
       setInput('default_bump', 'minor');
       setInput('default_prerelease_bump', 'preminor');
       await action();
 
       /*
-        * Then
-        */
+       * Then
+       */
       expect(mockCreateTag).toHaveBeenCalledWith(
-        'v1.3.0-prerelease.0',  // prerelease drafts patch upgrades
+        'v1.3.0-prerelease.0', // prerelease drafts patch upgrades
         expect.any(Boolean),
         false,
         expect.any(String),
@@ -1068,7 +1068,7 @@ describe('github-tag-action', () => {
       );
       expect(mockSetFailed).not.toBeCalled();
     });
-    
+
     it('does create prepatch tag', async () => {
       /*
        * Given
