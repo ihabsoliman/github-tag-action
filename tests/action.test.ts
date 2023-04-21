@@ -831,8 +831,8 @@ describe('github-tag-action', () => {
       expect(mockSetFailed).not.toBeCalled();
     });
 
-    /** 1.3.0 commit =[minor, preminor]=> 1.4.0-pre.0 */
-    it('does create prerelease tag respecting default_bump', async () => {
+    /** 1.3.0 commit =[minor, minor, prerelease]=> 1.4.0-pre.0 */
+    it('does create prerelease tag respecting default_draft_bump', async () => {
       /*
        * Given
        */
@@ -858,6 +858,7 @@ describe('github-tag-action', () => {
        * When
        */
       setInput('default_bump', 'minor');
+      setInput('default_draft_bump', 'minor');
       setInput('default_prerelease_bump', 'prerelease');
       await action();
 
@@ -874,8 +875,8 @@ describe('github-tag-action', () => {
       expect(mockSetFailed).not.toBeCalled();
     });
 
-    /** 1.3.0-pre.0 + commit =[minor, prerelease]=> 1.3.0-pre.1 */
-    it('does update prerelease tag respecting default_bump', async () => {
+    /** 1.3.0-pre.0 + commit =[minor, minor, prerelease]=> 1.3.0-pre.1 */
+    it('does update prerelease tag respecting default_draft_bump', async () => {
       /*
        * Given
        */
@@ -908,6 +909,7 @@ describe('github-tag-action', () => {
        * When
        */
       setInput('default_bump', 'minor');
+      setInput('default_draft_bump', 'minor');
       setInput('default_prerelease_bump', 'prerelease');
       await action();
 
@@ -924,7 +926,7 @@ describe('github-tag-action', () => {
       expect(mockSetFailed).not.toBeCalled();
     });
 
-    /** 1.3.0-pre.0 + commit =[minor, preminor]=> 1.4.0-pre.0 */
+    /** 1.3.0-pre.0 + commit =[minor, minor, preminor]=> 1.4.0-pre.0 */
     it('does update prerelease tag with preminor', async () => {
       /*
        * Given
@@ -958,6 +960,7 @@ describe('github-tag-action', () => {
        * When
        */
       setInput('default_bump', 'minor');
+      setInput('default_draft_bump', 'minor');
       setInput('default_prerelease_bump', 'preminor');
       await action();
 
@@ -974,6 +977,98 @@ describe('github-tag-action', () => {
       expect(mockSetFailed).not.toBeCalled();
     });
 
+    /**
+     *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0 
+     * according to semver, a prerelease increment on a non-prerelease version drafts a new minor version
+     */
+    it('default_draft_bump defaults to default_prerelease_bump (prerelease)', async () => {
+      /*
+       * Given
+       */
+      const commits = [{ message: 'this is a commit', hash: null }];
+      jest
+        .spyOn(utils, 'getCommits')
+        .mockImplementation(async (sha) => commits);
+
+      const validTags = [
+        {
+          name: 'v1.2.3',
+          commit: { sha: '012345', url: '' },
+          zipball_url: '',
+          tarball_url: 'string',
+          node_id: 'string',
+        },
+      ];
+      jest
+        .spyOn(utils, 'getValidTags')
+        .mockImplementation(async () => validTags);
+
+      /*
+       * When
+       */
+      setInput('default_bump', 'minor');
+      setInput('default_prerelease_bump', 'prerelease');
+      await action();
+
+      /*
+       * Then
+       */
+      expect(mockCreateTag).toHaveBeenCalledWith(
+        'v1.2.4-prerelease.0',  // prerelease drafts patch upgrades
+        expect.any(Boolean),
+        false,
+        expect.any(String),
+        true
+      );
+      expect(mockSetFailed).not.toBeCalled();
+    });
+
+    /**
+     *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0 
+     * according to semver, a prerelease increment on a non-prerelease version drafts a new minor version
+     */
+    it('default_draft_bump defaults to default_prerelease_bump (preminor)', async () => {
+      /*
+        * Given
+        */
+      const commits = [{ message: 'this is a commit', hash: null }];
+      jest
+        .spyOn(utils, 'getCommits')
+        .mockImplementation(async (sha) => commits);
+
+      const validTags = [
+        {
+          name: 'v1.2.3',
+          commit: { sha: '012345', url: '' },
+          zipball_url: '',
+          tarball_url: 'string',
+          node_id: 'string',
+        },
+      ];
+      jest
+        .spyOn(utils, 'getValidTags')
+        .mockImplementation(async () => validTags);
+
+      /*
+        * When
+        */
+      setInput('default_bump', 'minor');
+      setInput('default_prerelease_bump', 'preminor');
+      await action();
+
+      /*
+        * Then
+        */
+      expect(mockCreateTag).toHaveBeenCalledWith(
+        'v1.3.0-prerelease.0',  // prerelease drafts patch upgrades
+        expect.any(Boolean),
+        false,
+        expect.any(String),
+        true
+      );
+      expect(mockSetFailed).not.toBeCalled();
+    });
+    
     it('does create prepatch tag', async () => {
       /*
        * Given
