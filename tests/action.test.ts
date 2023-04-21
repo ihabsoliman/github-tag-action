@@ -709,6 +709,7 @@ describe('github-tag-action', () => {
     beforeEach(() => {
       jest.clearAllMocks();
       setBranch('prerelease');
+      loadDefaultInputs();    
       setInput('pre_release_branches', 'prerelease');
       setInput('force_prerelease_bump', '');
     });
@@ -866,7 +867,9 @@ describe('github-tag-action', () => {
       expect(mockCreateTag).toHaveBeenCalledWith(
         'v1.3.0-prerelease.0',
         expect.any(Boolean),
-        expect.any(String)
+        false,
+        expect.any(String),
+        true
       );
       expect(mockSetFailed).not.toBeCalled();
     });
@@ -914,7 +917,9 @@ describe('github-tag-action', () => {
       expect(mockCreateTag).toHaveBeenCalledWith(
         'v1.3.0-prerelease.1',
         expect.any(Boolean),
-        expect.any(String)
+        false,
+        expect.any(String),
+        true
       );
       expect(mockSetFailed).not.toBeCalled();
     });
@@ -962,7 +967,9 @@ describe('github-tag-action', () => {
       expect(mockCreateTag).toHaveBeenCalledWith(
         'v1.4.0-prerelease.0',
         expect.any(Boolean),
-        expect.any(String)
+        false,
+        expect.any(String),
+        true
       );
       expect(mockSetFailed).not.toBeCalled();
     });

@@ -32,6 +32,11 @@ export function clearInputs() {
     .forEach((key) => delete process.env[key]);
 }
 
+export function resetInputs(map: { [key: string]: string }) {
+  clearInputs();
+  Object.keys(map).forEach((key) => setInput(key, map[key]));
+}
+
 export function loadDefaultInputs() {
   const actionYaml = fs.readFileSync(
     path.join(process.cwd(), 'action.yml'),
@@ -46,7 +51,7 @@ export function loadDefaultInputs() {
       (obj, key) => ({ ...obj, [key]: actionJson['inputs'][key].default }),
       {}
     );
-  setInputs(defaultInputs);
+  resetInputs(defaultInputs);
 }
 
 // Don't know how to have this file only for test but not have 'tsc' complain. So I made it a test file...
