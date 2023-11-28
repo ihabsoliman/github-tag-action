@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import { sync as parser } from 'conventional-commits-parser';
 import { gte, inc, parse, ReleaseType, SemVer, valid } from 'semver';
 import { analyzeCommits } from '@semantic-release/commit-analyzer';
 import { generateNotes } from '@semantic-release/release-notes-generator';
@@ -35,6 +36,7 @@ export default async function main() {
   const forceUpdate = /true/i.test(core.getInput('force_update'));
   const releaseBranches = core.getInput('release_branches');
   const preReleaseBranches = core.getInput('pre_release_branches');
+  const scopes = core.getInput('scopes');
   const appendToPreReleaseTag = core.getInput('append_to_pre_release_tag');
   const createAnnotatedTag = /true/i.test(
     core.getInput('create_annotated_tag')
@@ -131,6 +133,22 @@ export default async function main() {
 
     commits = await getCommits(previousTag.commit.sha, commitRef);
     core.debug('We found ' + commits.length + ' commits to consider!');
+
+    if (scopes.length) {
+      const isInScope = (scope: string) =>
+        scopes.split(',').some((includedScope) => scope.match(includedScope));
+      commits = commits.filter((commit) => {
+        const scope = parser(commit.message).scope;
+        if (scope) {
+          const isInScopes = scopes
+            .split(',')
+            .some((includedScope) => scope.match(includedScope));
+          return isInScopes;
+        } else {
+          return false;
+        }
+      });
+    }
 
     let bump = await analyzeCommits(
       {
