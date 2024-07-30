@@ -44,11 +44,11 @@ inputs:
     description: "Comma separated list of release rules. Format: `<keyword>:<release_type>`. Example: `hotfix:patch,pre-feat:preminor`."
     required: false
   release_branches:
-    description: "Comma separated list of branches (bash reg exp accepted) that will generate the release tags. Other branches and pull-requests generate versions postfixed with the commit hash and do not generate any tag. Examples: `master` or `.*` or `release.*,hotfix.*,master`..."
+    description: "Comma separated list of branches (JavaScript regular expression accepted) that will generate the release tags. Other branches and pull-requests generate versions postfixed with the commit hash and do not generate any repository tag. Examples: `^master$` or `.*` or `^release.*,^hotfix.*,^master$`... (default: `^master$,^main$`)."
     required: false
-    default: "master,main"
+    default: "^master$,^main$"
   pre_release_branches:
-    description: "Comma separated list of branches (bash reg exp accepted) that will generate pre-release tags."
+    description: "Comma separated list of branches (JavaScript regular expression accepted) that will generate the pre-release tags."
     required: false
   commit_sha:
     description: "The commit SHA value to add the tag. If specified, it uses this value instead GITHUB_SHA. It could be useful when a previous step merged a branch into github.ref."
