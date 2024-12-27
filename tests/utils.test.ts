@@ -64,19 +64,15 @@ describe('utils', () => {
         node_id: 'string',
       },
     ];
-    const mockListTags = jest
-      .spyOn(github, 'listTags')
-      .mockImplementation(async () => testTags);
 
     /*
      * When
      */
-    const validTags = await getValidTags(regex, false);
+    const validTags = await getValidTags(testTags, regex);
 
     /*
      * Then
      */
-    expect(mockListTags).toHaveBeenCalled();
     expect(validTags).toHaveLength(1);
   });
 
@@ -114,19 +110,15 @@ describe('utils', () => {
         node_id: 'string',
       },
     ];
-    const mockListTags = jest
-      .spyOn(github, 'listTags')
-      .mockImplementation(async () => testTags);
 
     /*
      * When
      */
-    const validTags = await getValidTags(regex, false);
+    const validTags = await getValidTags(testTags, regex);
 
     /*
      * Then
      */
-    expect(mockListTags).toHaveBeenCalled();
     expect(validTags[0]).toEqual({
       name: 'v1.2.4-prerelease.2',
       commit: { sha: 'string', url: 'string' },
@@ -163,17 +155,13 @@ describe('utils', () => {
         node_id: 'string',
       },
     ];
-    const mockListTags = jest
-      .spyOn(github, 'listTags')
-      .mockImplementation(async () => testTags);
     /*
      * When
      */
-    const validTags = await getValidTags(/^app1\//, false);
+    const validTags = await getValidTags(testTags, /^app1\//);
     /*
      * Then
      */
-    expect(mockListTags).toHaveBeenCalled();
     expect(validTags).toHaveLength(1);
     expect(validTags[0]).toEqual({
       name: 'app1/3.0.0',

@@ -12,7 +12,7 @@ import {
   mapCustomReleaseRules,
   mergeWithDefaultChangelogRules,
 } from './utils';
-import { createTag } from './github';
+import { createTag, listTags } from './github';
 import { Await } from './ts';
 
 export default async function main() {
@@ -22,6 +22,7 @@ export default async function main() {
     | 'false';
   const tagPrefix = core.getInput('tag_prefix');
   const customTag = core.getInput('custom_tag');
+  const forceUpdate = /true/i.test(core.getInput('force_update'));
   const releaseBranches = core.getInput('release_branches');
   const preReleaseBranches = core.getInput('pre_release_branches');
   const appendToPreReleaseTag = core.getInput('append_to_pre_release_tag');
@@ -69,10 +70,8 @@ export default async function main() {
 
   const prefixRegex = new RegExp(`^${tagPrefix}`);
 
-  const validTags = await getValidTags(
-    prefixRegex,
-    /true/i.test(shouldFetchAllTags)
-  );
+  const tags = await listTags(/true/i.test(shouldFetchAllTags));
+  const validTags = await getValidTags(tags, prefixRegex);
   const latestTag = getLatestTag(validTags, prefixRegex, tagPrefix);
   const latestPrereleaseTag = getLatestPrereleaseTag(
     validTags,
@@ -218,7 +217,8 @@ export default async function main() {
     return;
   }
 
-  if (validTags.map((tag) => tag.name).includes(newTag)) {
+  const tagExists = tags.map((tag) => tag.name).includes(newTag);
+  if (tagExists && !forceUpdate) {
     core.info('This tag already exists. Skipping the tag creation.');
     return;
   }
@@ -228,5 +228,5 @@ export default async function main() {
     return;
   }
 
-  await createTag(newTag, createAnnotatedTag, commitRef);
+  await createTag(newTag, createAnnotatedTag, tagExists, commitRef);
 }

@@ -26,6 +26,12 @@ export function setInputs(map: { [key: string]: string }) {
   Object.keys(map).forEach((key) => setInput(key, map[key]));
 }
 
+export function clearInputs() {
+  Object.keys(process.env)
+    .filter((key) => key.startsWith('INPUT_'))
+    .forEach((key) => delete process.env[key]);
+}
+
 export function loadDefaultInputs() {
   const actionYaml = fs.readFileSync(
     path.join(process.cwd(), 'action.yml'),

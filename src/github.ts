@@ -4,7 +4,7 @@ import { Await } from './ts';
 
 let octokitSingleton: ReturnType<typeof getOctokit>;
 
-type Tag = {
+export type Tag = {
   name: string;
   commit: {
     sha: string;
@@ -14,6 +14,8 @@ type Tag = {
   tarball_url: string;
   node_id: string;
 };
+
+export type Tags = Await<ReturnType<typeof listTags>>;
 
 export function getOctokitSingleton() {
   if (octokitSingleton) {
@@ -68,6 +70,7 @@ export async function compareCommits(baseRef: string, headRef: string) {
 export async function createTag(
   newTag: string,
   createAnnotatedTag: boolean,
+  update: boolean,
   GITHUB_SHA: string
 ) {
   const octokit = getOctokitSingleton();
@@ -85,10 +88,20 @@ export async function createTag(
     });
   }
 
-  core.debug(`Pushing new tag to the repo.`);
-  await octokit.git.createRef({
-    ...context.repo,
-    ref: `refs/tags/${newTag}`,
-    sha: annotatedTag ? annotatedTag.data.sha : GITHUB_SHA,
-  });
+  if (update) {
+    core.info(`Updating existing tag ${newTag} on the repo.`);
+    await octokit.git.updateRef({
+      ...context.repo,
+      ref: `tags/${newTag}`,
+      sha: annotatedTag ? annotatedTag.data.sha : GITHUB_SHA,
+      force: true,
+    });
+  } else {
+    core.info(`Pushing new tag to the repo.`);
+    await octokit.git.createRef({
+      ...context.repo,
+      ref: `refs/tags/${newTag}`,
+      sha: annotatedTag ? annotatedTag.data.sha : GITHUB_SHA,
+    });
+  }
 }
