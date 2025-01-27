@@ -39,6 +39,7 @@ export default async function main() {
   const shouldFetchAllTags = core.getInput('fetch_all_tags');
   const commitSha = core.getInput('commit_sha');
   const pushTag = core.getBooleanInput('push_tag');
+  const commitAnalyzerPreset = core.getInput('commit_analyzer_preset');
 
   let mappedReleaseRules;
   if (customReleaseRules) {
@@ -131,9 +132,10 @@ export default async function main() {
 
     let bump = await analyzeCommits(
       {
+        preset: commitAnalyzerPreset,
         releaseRules: mappedReleaseRules
           ? // analyzeCommits doesn't appreciate rules with a section /shrug
-            mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
+          mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
           : undefined,
       },
       { commits, logger: { log: console.info.bind(console) } }

@@ -75,6 +75,10 @@ inputs:
     description: "Push the created tag to remote ref. If false, tag is created, but not pushed."
     required: false
     default: "true"
+  commit_analyzer_preset:
+    description: "The semantic-release commit-analyzer preset to use for parsing the commit list. Refer to this list of available options. https://github.com/semantic-release/commit-analyzer?tab=readme-ov-file#options"
+    required: false
+    default: "angular"
 
 runs:
   using: "node20"

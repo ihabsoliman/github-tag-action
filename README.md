@@ -52,12 +52,15 @@ jobs:
 - **create_annotated_tag** _(optional)_ - Boolean to create an annotated rather than a lightweight one (default: `false`).
 - **tag_prefix** _(optional)_ - A prefix to the tag name (default: `v`).
 - **append_to_pre_release_tag** _(optional)_ - A suffix to the pre-release tag name (default: `<branch>`).
+- **commit_analyzer_preset** _(optional)_ - A supported `conventional-changelog` preset (default: `angular`). See ![list of supported values](https://github.com/semantic-release/commit-analyzer#options)
 
 #### Customize the conventional commit messages & titles of changelog sections
 
 - **custom_release_rules** _(optional)_ - Comma separated list of release rules.
 
-  __Format__: `<keyword>:<release_type>:<changelog_section>` where `<changelog_section>` is optional and will default to [Angular's conventions](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular).
+  __Format__: `<keyword>:<release_type>:<changelog_section>` where `<changelog_section>` is optional. The `<changelog_section>` will default to the convention associated with the selected `commit_analyzer_preset`. Two of the most common conventions:
+    * [Angular's conventions](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular).
+    * [ConventionalCommit's conventions](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-conventionalcommits).
 
   __Examples__:
     1. `hotfix:patch,pre-feat:preminor`,
