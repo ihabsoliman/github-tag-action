@@ -135,7 +135,7 @@ export default async function main() {
         preset: commitAnalyzerPreset,
         releaseRules: mappedReleaseRules
           ? // analyzeCommits doesn't appreciate rules with a section /shrug
-          mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
+            mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
           : undefined,
       },
       { commits, logger: { log: console.info.bind(console) } }
