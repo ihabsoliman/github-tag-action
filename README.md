@@ -90,9 +90,9 @@ The action will parse the new commits since the last tag using the [semantic-rel
 
 semantic-release uses the commit messages to determine the type of changes in the codebase. Following formalized conventions for commit messages, semantic-release automatically determines the next [semantic version](https://semver.org) number.
 
-By default semantic-release uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines).
+By default semantic-release uses [Angular Commit Message Conventions](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#-git-commit-guidelines), but different conventions can be used via the `commit_analyzer_preset` option.
 
-Here is an example of the release type that will be done based on a commit messages:
+Here is an example of the release type that will be done based on a commit messages, using the default settings:
 
 <table>
 <tr>
