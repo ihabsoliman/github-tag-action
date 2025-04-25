@@ -43,6 +43,9 @@ inputs:
     description: "A prefix to the tag name (default: `v`)."
     required: false
     default: "v"
+  tag_search_pattern:
+    description: "A glob pattern to filter tags to consider for version bumping (e.g. `v0.*`). Useful for projects with multiple major versions supported simultaneously."
+    required: false
   append_to_pre_release_tag:
     description: "A suffix to a pre-release tag name (default: `<branch>`)."
     required: false

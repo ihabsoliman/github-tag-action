@@ -5,8 +5,10 @@ import DEFAULT_RELEASE_TYPES from '@semantic-release/commit-analyzer/lib/default
 import { compareCommits, Tags } from './github';
 import { defaultChangelogRules } from './defaults';
 import { context } from '@actions/github';
+import { minimatch } from 'minimatch';
 
 export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
+  const tagSearchPattern = core.getInput('tag_search_pattern');
   const invalidTags = tags.filter(
     (tag) =>
       !prefixRegex.test(tag.name) || !valid(tag.name.replace(prefixRegex, ''))
@@ -14,7 +16,7 @@ export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
 
   invalidTags.forEach((tag) => core.debug(`Found Invalid Tag: ${tag.name}.`));
 
-  const validTags = tags
+  let validTags = tags
     .filter(
       (tag) =>
         prefixRegex.test(tag.name) && valid(tag.name.replace(prefixRegex, ''))
@@ -22,6 +24,22 @@ export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
     .sort((a, b) =>
       rcompare(a.name.replace(prefixRegex, ''), b.name.replace(prefixRegex, ''))
     );
+
+  // Apply tag_search_pattern filtering if provided
+  if (tagSearchPattern) {
+    core.info(`Filtering tags with pattern: ${tagSearchPattern}`);
+    validTags = validTags.filter((tag) => {
+      const matches = minimatch(tag.name, tagSearchPattern);
+      if (matches) {
+        core.debug(`Tag ${tag.name} matches the pattern ${tagSearchPattern}`);
+      }
+      return matches;
+    });
+    
+    if (validTags.length === 0) {
+      core.warning(`No tags match the provided pattern: ${tagSearchPattern}`);
+    }
+  }
 
   validTags.forEach((tag) => core.debug(`Found Valid Tag: ${tag.name}.`));
 

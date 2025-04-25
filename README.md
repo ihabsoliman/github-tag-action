@@ -52,6 +52,7 @@ jobs:
 - **custom_tag** _(optional)_ - Custom tag name. If specified, it overrides bump settings.
 - **create_annotated_tag** _(optional)_ - Boolean to create an annotated rather than a lightweight one (default: `false`).
 - **tag_prefix** _(optional)_ - A prefix to the tag name (default: `v`).
+- **tag_search_pattern** _(optional)_ - A glob pattern to filter tags to consider for version bumping (e.g. `v0.*`). Useful for projects with multiple major versions supported simultaneously with different root commits.
 - **append_to_pre_release_tag** _(optional)_ - A suffix to the pre-release tag name (default: `<branch>`).
 - **commit_analyzer_preset** _(optional)_ - A supported `conventional-changelog` preset (default: `angular`). See ![list of supported values](https://github.com/semantic-release/commit-analyzer#options)
 

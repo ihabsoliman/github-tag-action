@@ -6,6 +6,7 @@ import { defaultChangelogRules } from '../src/defaults';
 
 jest.spyOn(core, 'debug').mockImplementation(() => {});
 jest.spyOn(core, 'warning').mockImplementation(() => {});
+jest.spyOn(core, 'info').mockImplementation(() => {});
 
 const regex = /^v/;
 
@@ -170,6 +171,59 @@ describe('utils', () => {
       tarball_url: 'string',
       node_id: 'string',
     });
+  });
+
+  it('filters tags by pattern when tag_search_pattern is provided', async () => {
+    /*
+     * Given
+     */
+    const testTags = [
+      {
+        name: 'v1.2.3',
+        commit: { sha: 'sha1', url: 'string' },
+        zipball_url: 'string',
+        tarball_url: 'string',
+        node_id: 'string',
+      },
+      {
+        name: 'v2.0.1',
+        commit: { sha: 'sha2', url: 'string' },
+        zipball_url: 'string',
+        tarball_url: 'string',
+        node_id: 'string',
+      },
+      {
+        name: 'v1.3.0',
+        commit: { sha: 'sha3', url: 'string' },
+        zipball_url: 'string',
+        tarball_url: 'string',
+        node_id: 'string',
+      },
+    ];
+    
+    const getInputMock = jest.spyOn(core, 'getInput');
+    getInputMock.mockImplementation((name) => {
+      if (name === 'tag_search_pattern') {
+        return 'v1.*';
+      }
+      return '';
+    });
+
+    /*
+     * When
+     */
+    const validTags = await getValidTags(testTags, /^v/);
+
+    /*
+     * Then
+     */
+    expect(validTags).toHaveLength(2);
+    expect(validTags[0].name).toEqual('v1.3.0'); // Tags should be sorted, with v1.3.0 before v1.2.3
+    expect(validTags[1].name).toEqual('v1.2.3');
+    expect(validTags.find(tag => tag.name === 'v2.0.1')).toBeUndefined();
+    
+    // Clean up
+    getInputMock.mockRestore();
   });
 
   describe('custom release types', () => {
