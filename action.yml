@@ -79,6 +79,10 @@ inputs:
     description: "The semantic-release commit-analyzer preset to use for parsing the commit list. Refer to this list of available options. https://github.com/semantic-release/commit-analyzer?tab=readme-ov-file#options"
     required: false
     default: "angular"
+  soft_fail:
+    description: "If true, an unrecoverable error (after retries/fallbacks) is reported as a warning and the step exits successfully without creating a tag, instead of failing the job."
+    required: false
+    default: "false"
 
 runs:
   using: "node20"

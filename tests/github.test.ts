@@ -53,3 +53,119 @@ describe('github', () => {
     });
   });
 });
+
+describe('compareCommits', () => {
+  const compareCommitsMock = jest.fn();
+  const execMock = jest.fn();
+
+  jest.mock('@actions/exec', () => ({
+    exec: (...args: any[]) => execMock(...args),
+  }));
+
+  beforeEach(() => {
+    jest.resetModules();
+    compareCommitsMock.mockReset();
+    execMock.mockReset();
+
+    jest.doMock('@actions/github', () => ({
+      context: { repo: { owner: 'mock-owner', repo: 'mock-repo' } },
+      getOctokit: jest.fn().mockReturnValue({
+        repos: { compareCommits: compareCommitsMock },
+      }),
+    }));
+    jest.doMock('@actions/exec', () => ({ exec: execMock }));
+  });
+
+  it('returns commits from the API on first success', async () => {
+    compareCommitsMock.mockResolvedValue({
+      data: {
+        commits: [{ sha: 'abc', commit: { message: 'feat: thing' } }],
+      },
+    });
+
+    const { compareCommits } = require('../src/github');
+    const commits = await compareCommits('base', 'head');
+
+    expect(commits).toEqual([
+      { sha: 'abc', commit: { message: 'feat: thing' } },
+    ]);
+    expect(compareCommitsMock).toHaveBeenCalledTimes(1);
+    expect(execMock).not.toHaveBeenCalled();
+  });
+
+  it('retries transient 500-class API errors before succeeding', async () => {
+    const serverError: any = new Error(
+      'Server Error: Sorry, this diff is taking too long to generate.'
+    );
+    serverError.status = 500;
+
+    compareCommitsMock
+      .mockRejectedValueOnce(serverError)
+      .mockResolvedValueOnce({
+        data: { commits: [{ sha: 'def', commit: { message: 'fix: bug' } }] },
+      });
+
+    const { compareCommits } = require('../src/github');
+    const commits = await compareCommits('base', 'head');
+
+    expect(commits).toEqual([{ sha: 'def', commit: { message: 'fix: bug' } }]);
+    expect(compareCommitsMock).toHaveBeenCalledTimes(2);
+    expect(execMock).not.toHaveBeenCalled();
+  }, 10000);
+
+  it('falls back to local git log when the API keeps failing', async () => {
+    const serverError: any = new Error(
+      'Server Error: Sorry, this diff is taking too long to generate.'
+    );
+    serverError.status = 500;
+    compareCommitsMock.mockRejectedValue(serverError);
+
+    execMock.mockImplementation(
+      (_cmd: string, _args: string[], options: any) => {
+        options.listeners.stdout(
+          Buffer.from(
+            'sha1\x1fcommit message one\x1e\nsha2\x1fcommit message two\x1e\n'
+          )
+        );
+        return Promise.resolve(0);
+      }
+    );
+
+    const { compareCommits } = require('../src/github');
+    const commits = await compareCommits('base', 'head');
+
+    expect(commits).toEqual([
+      { sha: 'sha1', commit: { message: 'commit message one' } },
+      { sha: 'sha2', commit: { message: 'commit message two' } },
+    ]);
+  }, 10000);
+
+  it('re-throws the original API error if the local git fallback also fails', async () => {
+    const serverError: any = new Error(
+      'Server Error: Sorry, this diff is taking too long to generate.'
+    );
+    serverError.status = 500;
+    compareCommitsMock.mockRejectedValue(serverError);
+    execMock.mockRejectedValue(new Error('fatal: bad revision'));
+
+    const { compareCommits } = require('../src/github');
+
+    await expect(compareCommits('base', 'head')).rejects.toThrow(
+      'Sorry, this diff is taking too long to generate.'
+    );
+  }, 10000);
+
+  it('does not retry non-retryable (e.g. 4xx) API errors', async () => {
+    const authError: any = new Error('Bad credentials');
+    authError.status = 401;
+    compareCommitsMock.mockRejectedValue(authError);
+    execMock.mockRejectedValue(new Error('fatal: bad revision'));
+
+    const { compareCommits } = require('../src/github');
+
+    await expect(compareCommits('base', 'head')).rejects.toThrow(
+      'Bad credentials'
+    );
+    expect(compareCommitsMock).toHaveBeenCalledTimes(1);
+  });
+});

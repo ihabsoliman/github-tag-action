@@ -15,6 +15,29 @@ import {
 import { createTag, listTags } from './github';
 import { Await } from './ts';
 
+/**
+ * getCommits() (transitively) hits the GitHub compare API and a local git
+ * fallback, both of which can still fail (e.g. no network, or a shallow
+ * checkout that doesn't have `baseRef` locally). Rather than aborting the
+ * whole tag push in that case, fall back to an empty commit list: the
+ * existing bump/changelog logic already treats "no commits found" as "use
+ * default_bump with no changelog entries", so a best-effort tag can still
+ * be pushed instead of the step failing outright.
+ */
+async function getCommitsOrFallback(
+  baseRef: string,
+  headRef: string
+): Promise<Await<ReturnType<typeof getCommits>>> {
+  try {
+    return await getCommits(baseRef, headRef);
+  } catch (error: any) {
+    core.warning(
+      `Could not determine commits between ${baseRef} and ${headRef} (${error?.message}). Proceeding with an empty commit list, so tagging still falls back to default_bump instead of failing.`
+    );
+    return [];
+  }
+}
+
 export default async function main() {
   const defaultBump = core.getInput('default_bump') as ReleaseType | 'false';
   const forceBump = core.getInput('force_bump') as ReleaseType | 'false' | '';
@@ -91,7 +114,7 @@ export default async function main() {
   let newVersion: string;
 
   if (customTag) {
-    commits = await getCommits(latestTag.commit.sha, commitRef);
+    commits = await getCommitsOrFallback(latestTag.commit.sha, commitRef);
 
     core.setOutput('release_type', 'custom');
     newVersion = customTag;
@@ -127,7 +150,7 @@ export default async function main() {
     core.setOutput('previous_version', previousVersion.version);
     core.setOutput('previous_tag', previousTag.name);
 
-    commits = await getCommits(previousTag.commit.sha, commitRef);
+    commits = await getCommitsOrFallback(previousTag.commit.sha, commitRef);
     core.debug('We found ' + commits.length + ' commits to consider!');
 
     let bump = await analyzeCommits(
