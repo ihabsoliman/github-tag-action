@@ -142,6 +142,7 @@ export async function compareCommitsViaLocalGit(
       `--pretty=format:%H${FIELD_SEP}%B${RECORD_SEP}`,
     ],
     {
+      silent: true,
       listeners: {
         stdout: (data: Buffer) => {
           output += data.toString();
