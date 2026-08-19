@@ -51,14 +51,12 @@ export default async function main() {
   const { GITHUB_REF, GITHUB_SHA } = process.env;
 
   if (!GITHUB_REF) {
-    core.setFailed('Missing GITHUB_REF.');
-    return;
+    throw new Error('Missing GITHUB_REF.');
   }
 
   const commitRef = commitSha || GITHUB_SHA;
   if (!commitRef) {
-    core.setFailed('Missing commit_sha or GITHUB_SHA.');
-    return;
+    throw new Error('Missing commit_sha or GITHUB_SHA.');
   }
 
   const currentBranch = getBranchFromRef(GITHUB_REF);
@@ -112,15 +110,13 @@ export default async function main() {
     }
 
     if (!previousTag) {
-      core.setFailed('Could not find previous tag.');
-      return;
+      throw new Error('Could not find previous tag.');
     }
 
     previousVersion = parse(previousTag.name.replace(prefixRegex, ''));
 
     if (!previousVersion) {
-      core.setFailed('Could not parse previous tag.');
-      return;
+      throw new Error('Could not parse previous tag.');
     }
 
     core.info(
@@ -190,13 +186,11 @@ export default async function main() {
     const incrementedVersion = inc(previousVersion, releaseType, identifier);
 
     if (!incrementedVersion) {
-      core.setFailed('Could not increment version.');
-      return;
+      throw new Error('Could not increment version.');
     }
 
     if (!valid(incrementedVersion)) {
-      core.setFailed(`${incrementedVersion} is not a valid semver.`);
-      return;
+      throw new Error(`${incrementedVersion} is not a valid semver.`);
     }
 
     newVersion = incrementedVersion;

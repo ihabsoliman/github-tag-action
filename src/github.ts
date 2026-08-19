@@ -137,6 +137,7 @@ export async function compareCommitsViaLocalGit(
     'git',
     [
       'log',
+      '--reverse',
       `${baseRef}..${headRef}`,
       `--pretty=format:%H${FIELD_SEP}%B${RECORD_SEP}`,
     ],

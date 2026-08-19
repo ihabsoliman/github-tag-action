@@ -39,6 +39,35 @@ describe('github-tag-action', () => {
   });
 
   describe('special cases', () => {
+    it('throws (rather than core.setFailed) when GITHUB_REF is missing, so soft_fail in main.ts can catch it', async () => {
+      /*
+       * Given
+       */
+      delete process.env['GITHUB_REF'];
+
+      /*
+       * When / Then
+       */
+      await expect(action()).rejects.toThrow('Missing GITHUB_REF.');
+      expect(mockSetFailed).not.toBeCalled();
+    });
+
+    it('throws (rather than core.setFailed) when commit_sha/GITHUB_SHA is missing', async () => {
+      /*
+       * Given
+       */
+      delete process.env['GITHUB_SHA'];
+      setInput('commit_sha', '');
+
+      /*
+       * When / Then
+       */
+      await expect(action()).rejects.toThrow(
+        'Missing commit_sha or GITHUB_SHA.'
+      );
+      expect(mockSetFailed).not.toBeCalled();
+    });
+
     it('does create initial tag', async () => {
       /*
        * Given
