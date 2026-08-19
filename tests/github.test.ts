@@ -155,11 +155,10 @@ describe('compareCommits', () => {
     );
   }, 10000);
 
-  it('does not retry non-retryable (e.g. 4xx) API errors', async () => {
+  it('does not retry or fall back to local git for non-retryable (e.g. 4xx) API errors', async () => {
     const authError: any = new Error('Bad credentials');
     authError.status = 401;
     compareCommitsMock.mockRejectedValue(authError);
-    execMock.mockRejectedValue(new Error('fatal: bad revision'));
 
     const { compareCommits } = require('../src/github');
 
@@ -167,5 +166,6 @@ describe('compareCommits', () => {
       'Bad credentials'
     );
     expect(compareCommitsMock).toHaveBeenCalledTimes(1);
+    expect(execMock).not.toHaveBeenCalled();
   });
 });

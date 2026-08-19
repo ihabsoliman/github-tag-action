@@ -61,6 +61,18 @@ function sleep(ms: number) {
 }
 
 /**
+ * Whether an error from the compare API looks transient (a 5xx server
+ * error, or no HTTP response at all i.e. a network failure) as opposed to
+ * a definitive client error (bad credentials, missing ref, etc.) that a
+ * retry or a local-git fallback is very unlikely to fix, and that should
+ * instead surface immediately rather than being silently worked around.
+ */
+function isRetryableError(error: any): boolean {
+  const status = error?.status;
+  return RETRYABLE_STATUS_CODES.has(status) || status === undefined;
+}
+
+/**
  * Compare `headRef` to `baseRef` via the GitHub compare API, retrying a
  * few times on transient server errors (e.g. "Sorry, this diff is taking
  * too long to generate."), which GitHub documents as generally resolving
@@ -87,15 +99,13 @@ export async function compareCommitsViaApi(
 
       return commits.data.commits;
     } catch (error: any) {
-      const status = error?.status;
-      const isRetryable =
-        RETRYABLE_STATUS_CODES.has(status) || status === undefined;
+      const isRetryable = isRetryableError(error);
 
       if (!isRetryable || attempt === COMPARE_RETRY_ATTEMPTS) {
         throw error;
       }
 
-      core.warning(
+      core.debug(
         `compareCommits API call failed (attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}): ${error?.message}. Retrying in ${COMPARE_RETRY_DELAY_MS}ms.`
       );
       await sleep(COMPARE_RETRY_DELAY_MS);
@@ -151,9 +161,14 @@ export async function compareCommitsViaLocalGit(
 
 /**
  * Compare `headRef` to `baseRef` (i.e. baseRef...headRef). Tries the GitHub
- * compare API first (with retries), then falls back to a local `git log`
- * so a transient GitHub-side compare failure doesn't fail the whole tag
- * push (see the "Sorry, this diff is taking too long to generate." error).
+ * compare API first (with retries), then - only for the same class of
+ * transient/retryable errors - falls back to a local `git log` so a
+ * transient GitHub-side compare failure doesn't fail the whole tag push
+ * (see the "Sorry, this diff is taking too long to generate." error).
+ * Definitive client errors (bad credentials, invalid ref, etc.) are
+ * re-thrown immediately without attempting the local-git fallback, since
+ * that's very unlikely to help and risks silently proceeding with the
+ * wrong commit range instead of surfacing a real configuration problem.
  * @param baseRef - old commit
  * @param headRef - new commit
  */
@@ -164,6 +179,10 @@ export async function compareCommits(
   try {
     return await compareCommitsViaApi(baseRef, headRef);
   } catch (apiError: any) {
+    if (!isRetryableError(apiError)) {
+      throw apiError;
+    }
+
     core.warning(
       `Falling back to local git log after compare API failure: ${apiError?.message}`
     );
