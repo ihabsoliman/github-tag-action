@@ -86,10 +86,15 @@ export async function compareCommitsViaApi(
 ): Promise<CommitLike[]> {
   const octokit = getOctokitSingleton();
 
+  // Logged at `info` (not `debug`) so the compare range is visible in a
+  // normal run's output: a stray/misordered tag elsewhere in history can
+  // make this span far more commits than expected (e.g. a one-off v1.0.0
+  // tag sorting above an otherwise-continuous v0.x.y series), which is
+  // otherwise invisible until the compare API times out with no context.
+  core.info(`Comparing commits via API (${baseRef}...${headRef})`);
+
   for (let attempt = 1; attempt <= COMPARE_RETRY_ATTEMPTS; attempt++) {
-    core.debug(
-      `Comparing commits via API (${baseRef}...${headRef}), attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}`
-    );
+    core.debug(`Compare API attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}`);
     try {
       const commits = await octokit.repos.compareCommits({
         ...context.repo,
@@ -127,7 +132,7 @@ export async function compareCommitsViaLocalGit(
   baseRef: string,
   headRef: string
 ): Promise<CommitLike[]> {
-  core.debug(`Comparing commits via local git (${baseRef}...${headRef})`);
+  core.info(`Comparing commits via local git (${baseRef}...${headRef})`);
 
   const RECORD_SEP = '\x1e';
   const FIELD_SEP = '\x1f';
