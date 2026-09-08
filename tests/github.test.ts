@@ -2,6 +2,8 @@ import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 const listTagsMock = jest.fn();
 const compareCommitsMock = jest.fn();
+const listCommitsMock = jest.fn();
+const paginateMock = jest.fn();
 const getCommitMock = jest.fn();
 const createTagMock = jest.fn();
 const updateRefMock = jest.fn();
@@ -11,10 +13,12 @@ const execMock = jest.fn();
 jest.unstable_mockModule('@actions/github', () => ({
   context: { repo: { owner: 'mock-owner', repo: 'mock-repo' } },
   getOctokit: jest.fn().mockReturnValue({
+    paginate: paginateMock,
     rest: {
       repos: {
         listTags: listTagsMock,
         compareCommits: compareCommitsMock,
+        listCommits: listCommitsMock,
         getCommit: getCommitMock,
       },
       git: {
@@ -34,12 +38,14 @@ const {
   listTags,
   compareCommits,
   compareCommitsViaLocalGit,
+  listAllCommitsViaApi,
   isShallowRepository,
   listMergedTags,
   getCompareStatus,
   getLastCommit,
   getCommitRange,
   createTag,
+  NO_PREVIOUS_TAG_SHA,
 } = await import('../src/github.js');
 
 describe('github', () => {
@@ -199,6 +205,86 @@ describe('compareCommits', () => {
       expect.any(Array),
       expect.objectContaining({ cwd: '/repo/checkout' }),
     );
+  }, 10000);
+
+  it('lists all commits via the API instead of comparing, when baseRef is the no-previous-tag sentinel', async () => {
+    paginateMock.mockResolvedValue([
+      { sha: 'newest', commit: { message: 'feat: two' } },
+      { sha: 'oldest', commit: { message: 'feat: one' } },
+    ]);
+
+    const commits = await compareCommits(NO_PREVIOUS_TAG_SHA, 'head');
+
+    expect(commits).toEqual([
+      { sha: 'oldest', commit: { message: 'feat: one' } },
+      { sha: 'newest', commit: { message: 'feat: two' } },
+    ]);
+    expect(paginateMock).toHaveBeenCalledWith(
+      listCommitsMock,
+      expect.objectContaining({ sha: 'head' }),
+    );
+    expect(compareCommitsMock).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a single-ref local git log (not base..head) when baseRef is the no-previous-tag sentinel', async () => {
+    const serverError: any = new Error('Server Error');
+    serverError.status = 500;
+    paginateMock.mockRejectedValue(serverError);
+    execMock.mockImplementation(
+      (_cmd: string, _args: string[], options: any) => {
+        options.listeners.stdout(Buffer.from('sha1\x1ffirst commit\x1e\n'));
+        return Promise.resolve(0);
+      },
+    );
+
+    const commits = await compareCommits(NO_PREVIOUS_TAG_SHA, 'head');
+
+    expect(commits).toEqual([
+      { sha: 'sha1', commit: { message: 'first commit' } },
+    ]);
+    expect(execMock).toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining(['head']),
+      expect.anything(),
+    );
+    expect(execMock).not.toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining([`${NO_PREVIOUS_TAG_SHA}..head`]),
+      expect.anything(),
+    );
+  }, 10000);
+});
+
+describe('listAllCommitsViaApi', () => {
+  beforeEach(() => {
+    paginateMock.mockReset();
+  });
+
+  it('maps and reverses the paginated (newest-first) API response to oldest-first', async () => {
+    paginateMock.mockResolvedValue([
+      { sha: 'newest', commit: { message: 'feat: two' } },
+      { sha: 'oldest', commit: { message: 'feat: one' } },
+    ]);
+
+    const commits = await listAllCommitsViaApi('head');
+
+    expect(commits).toEqual([
+      { sha: 'oldest', commit: { message: 'feat: one' } },
+      { sha: 'newest', commit: { message: 'feat: two' } },
+    ]);
+  });
+
+  it('retries transient errors before succeeding', async () => {
+    const serverError: any = new Error('Server Error');
+    serverError.status = 500;
+    paginateMock
+      .mockRejectedValueOnce(serverError)
+      .mockResolvedValueOnce([{ sha: 'a', commit: { message: 'fix: bug' } }]);
+
+    const commits = await listAllCommitsViaApi('head');
+
+    expect(commits).toEqual([{ sha: 'a', commit: { message: 'fix: bug' } }]);
+    expect(paginateMock).toHaveBeenCalledTimes(2);
   }, 10000);
 });
 

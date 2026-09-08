@@ -19,6 +19,7 @@ jest.unstable_mockModule('../src/github.js', () => ({
   getCompareStatus: getCompareStatusMock,
   isShallowRepository: isShallowRepositoryMock,
   listMergedTags: listMergedTagsMock,
+  NO_PREVIOUS_TAG_SHA: 'HEAD',
 }));
 
 const mockContext: { payload: Record<string, unknown> } = { payload: {} };

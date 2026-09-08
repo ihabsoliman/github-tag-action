@@ -6,6 +6,7 @@ import {
   getCompareStatus,
   isShallowRepository,
   listMergedTags,
+  NO_PREVIOUS_TAG_SHA,
   Tags,
 } from './github.js';
 import { defaultChangelogRules } from './defaults.js';
@@ -151,7 +152,7 @@ export function getLatestTag(
     ) || {
       name: `${tagPrefix}${initialVersion}`,
       commit: {
-        sha: 'HEAD',
+        sha: NO_PREVIOUS_TAG_SHA,
       },
     }
   );

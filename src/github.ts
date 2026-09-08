@@ -87,6 +87,42 @@ function isRetryableError(error: any): boolean {
 }
 
 /**
+ * Sentinel `commit.sha` `getLatestTag` returns when no previous tag
+ * exists, meaning "there's nothing to diff against - the whole history up
+ * to `headRef` is the release." Not a real git ref; `compareCommits`
+ * special-cases it instead of ever sending it to the compare API (which
+ * would resolve the literal string "HEAD" to the current tip and diff it
+ * against itself, silently reporting zero commits).
+ */
+export const NO_PREVIOUS_TAG_SHA = 'HEAD';
+
+/**
+ * Retry `fn` a few times on transient errors (see `isRetryableError`),
+ * with a fixed delay between attempts. Shared by the compare and
+ * list-all-commits API calls.
+ */
+async function withRetries<T>(fn: (attempt: number) => Promise<T>): Promise<T> {
+  for (let attempt = 1; attempt <= COMPARE_RETRY_ATTEMPTS; attempt++) {
+    core.debug(`API attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}`);
+    try {
+      return await fn(attempt);
+    } catch (error: any) {
+      if (!isRetryableError(error) || attempt === COMPARE_RETRY_ATTEMPTS) {
+        throw error;
+      }
+
+      core.debug(
+        `API call failed (attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}): ${error?.message}. Retrying in ${COMPARE_RETRY_DELAY_MS}ms.`,
+      );
+      await sleep(COMPARE_RETRY_DELAY_MS);
+    }
+  }
+
+  // Unreachable, satisfies TS control-flow analysis.
+  throw new Error('Unreachable');
+}
+
+/**
  * Compare `headRef` to `baseRef` via the GitHub compare API, retrying a
  * few times on transient server errors (e.g. "Sorry, this diff is taking
  * too long to generate."), which GitHub documents as generally resolving
@@ -114,32 +150,49 @@ async function compareCommitsRequest(
   // otherwise invisible until the compare API times out with no context.
   core.info(`Comparing commits via API (${baseRef}...${headRef})`);
 
-  for (let attempt = 1; attempt <= COMPARE_RETRY_ATTEMPTS; attempt++) {
-    core.debug(`Compare API attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}`);
-    try {
-      const commits = await octokit.rest.repos.compareCommits({
-        ...context.repo,
-        base: baseRef,
-        head: headRef,
-      });
+  return withRetries(async () => {
+    const commits = await octokit.rest.repos.compareCommits({
+      ...context.repo,
+      base: baseRef,
+      head: headRef,
+    });
 
-      return commits.data;
-    } catch (error: any) {
-      const isRetryable = isRetryableError(error);
+    return commits.data;
+  });
+}
 
-      if (!isRetryable || attempt === COMPARE_RETRY_ATTEMPTS) {
-        throw error;
-      }
+/**
+ * List every commit reachable from `headRef` via the GitHub API, oldest
+ * first. Used instead of `compareCommitsViaApi` when there's no previous
+ * tag to diff against (see `NO_PREVIOUS_TAG_SHA`) - the compare API always
+ * needs two real refs, so "everything up to `headRef`" has to be a plain
+ * listing instead of a diff.
+ */
+export async function listAllCommitsViaApi(
+  headRef: string,
+): Promise<CommitLike[]> {
+  const octokit = getOctokitSingleton();
 
-      core.debug(
-        `compareCommits API call failed (attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}): ${error?.message}. Retrying in ${COMPARE_RETRY_DELAY_MS}ms.`,
-      );
-      await sleep(COMPARE_RETRY_DELAY_MS);
-    }
-  }
+  core.info(
+    `No previous tag found; listing all commits via API up to ${headRef}.`,
+  );
 
-  // Unreachable, satisfies TS control-flow analysis.
-  throw new Error('Unreachable');
+  return withRetries(async () => {
+    // listCommits is paginated newest-first; reverse to match the
+    // oldest-first order compareCommits/compareCommitsViaLocalGit use.
+    const commits = await octokit.paginate(octokit.rest.repos.listCommits, {
+      ...context.repo,
+      sha: headRef,
+      per_page: 100,
+    });
+
+    return commits
+      .map((commit) => ({
+        sha: commit.sha,
+        commit: { message: commit.commit.message },
+      }))
+      .reverse();
+  });
 }
 
 /**
@@ -306,8 +359,12 @@ export async function compareCommits(
   headRef: string,
   options: GitOptions = {},
 ): Promise<CommitLike[]> {
+  const isFirstRelease = baseRef === NO_PREVIOUS_TAG_SHA;
+
   try {
-    return await compareCommitsViaApi(baseRef, headRef);
+    return isFirstRelease
+      ? await listAllCommitsViaApi(headRef)
+      : await compareCommitsViaApi(baseRef, headRef);
   } catch (apiError: any) {
     if (!isRetryableError(apiError)) {
       throw apiError;
@@ -317,7 +374,11 @@ export async function compareCommits(
       `Falling back to local git log after compare API failure: ${apiError?.message}`,
     );
     try {
-      return await compareCommitsViaLocalGit(baseRef, headRef, options);
+      return await compareCommitsViaLocalGit(
+        isFirstRelease ? undefined : baseRef,
+        headRef,
+        options,
+      );
     } catch (gitError: any) {
       core.warning(
         `Local git log fallback also failed: ${gitError?.message}. Re-throwing original API error.`,
