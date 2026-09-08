@@ -1,0 +1,41 @@
+# `lib/main.js` is a special file in Actions.
+# When you reference an action with `uses:` in a workflow,
+# the compiled files under `lib/` are the code that runs.
+# We generate `lib/` through a build process from `src/`.
+# This workflow makes sure the checked-in `lib/` actually matches what we expect it to be.
+name: Check dist
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
+
+jobs:
+  check-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+      - run: npm ci
+      - name: Rebuild lib/
+        run: npm run build
+      - name: Compare the expected and actual lib/ directories
+        run: |
+          if [ "$(git diff --ignore-space-at-eol lib/ | wc -l)" -gt "0" ]; then
+            echo "Detected uncommitted changes after build. See status below:"
+            git diff
+            exit 1
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ failure() }}
+        with:
+          name: lib
+          path: lib/
