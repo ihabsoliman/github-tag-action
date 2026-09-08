@@ -24,7 +24,7 @@
     "setup"
   ],
   "engines": {
-    "node": ">=24"
+    "node": "^24"
   },
   "author": "Ihab Soliman",
   "license": "MIT",

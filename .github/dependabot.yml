@@ -17,6 +17,12 @@ updates:
     schedule:
       interval: "weekly"
     versioning-strategy: "increase"
+    ignore:
+      # @types/node must track the runner's JS runtime (action.yml `using: node24`),
+      # not npm latest. The runner only ships node20/node24 externals, so a major
+      # bump here would type APIs that throw at runtime.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
