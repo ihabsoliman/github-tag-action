@@ -278,11 +278,13 @@ export default async function main() {
       else bump = defaultPreReleaseBump;
     }
 
-    // TODO: these next 10 lines are horrible!! why we have preminor as bump type at all if it is always striped away?
-    // If somebody uses custom release rules on a prerelease branch they might create a 'preprepatch' bump.
-    const preReg = /^pre/;
-    if (isPrerelease && preReg.test(bump)) {
-      bump = bump.replace(preReg, '');
+    // `bump` can already carry a 'pre' prefix here (e.g. 'preminor' from a
+    // custom release rule or default_prerelease_bump), but a prerelease
+    // branch always gets exactly one 'pre' prefix added below - strip any
+    // that are already there first, so the result is 'preminor' rather
+    // than 'preprepatch'/'prepreminor'.
+    if (isPrerelease) {
+      bump = bump.replace(/^(pre)+/, '');
     }
 
     const releaseType: ReleaseType = isPrerelease

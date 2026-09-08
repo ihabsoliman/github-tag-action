@@ -1020,6 +1020,55 @@ describe('github-tag-action', () => {
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
 
+    it('normalizes a doubled pre-prefix (e.g. a misconfigured "prepreminor") instead of producing an invalid release type', async () => {
+      /*
+       * Given
+       */
+      const commits = [{ message: 'this is a commit', hash: null }];
+      getCommitsMock.mockImplementation(async (sha) => commits);
+
+      const validTags = [
+        {
+          name: 'v1.2.3',
+          commit: { sha: '012345', url: '' },
+          zipball_url: '',
+          tarball_url: 'string',
+          node_id: 'string',
+        },
+        {
+          name: 'v1.3.0-prerelease.0',
+          commit: { sha: '123456', url: '' },
+          zipball_url: '',
+          tarball_url: 'string',
+          node_id: 'string',
+        },
+      ];
+      getValidTagsMock.mockImplementation(async () => validTags);
+
+      /*
+       * When
+       */
+      setInput('default_bump', 'minor');
+      setInput('default_draft_bump', 'minor');
+      // Not a real release type - simulates a misconfigured input that
+      // already carries more than one 'pre' prefix.
+      setInput('default_prerelease_bump', 'prepreminor');
+      await action();
+
+      /*
+       * Then
+       */
+      expect(mockCreateTag).toHaveBeenCalledWith(
+        'v1.4.0-prerelease.0',
+        expect.any(Boolean),
+        false,
+        expect.any(String),
+        true,
+        '',
+      );
+      expect(mockSetFailed).not.toHaveBeenCalled();
+    });
+
     /**
      *  1.2.3 commit =[minor, -, prerelease]=> 1.2.4-pre.0
      * according to semver, a prerelease increment on a non-prerelease version drafts a new minor version
