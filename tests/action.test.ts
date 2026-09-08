@@ -488,9 +488,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      jest
-        .spyOn(utils, 'getValidTags')
-        .mockImplementation(async () => validTags);
+      jest.spyOn(github, 'listTags').mockImplementation(async () => validTags);
 
       /*
        * When
@@ -503,7 +501,9 @@ describe('github-tag-action', () => {
       expect(mockCreateTag).toHaveBeenCalledWith(
         'v1.2.4',
         expect.any(Boolean),
-        expect.any(String)
+        false,
+        expect.any(String),
+        true
       );
       expect(mockSetFailed).not.toBeCalled();
     });
@@ -532,9 +532,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      jest
-        .spyOn(utils, 'getValidTags')
-        .mockImplementation(async () => validTags);
+      jest.spyOn(github, 'listTags').mockImplementation(async () => validTags);
 
       /*
        * When
@@ -547,7 +545,9 @@ describe('github-tag-action', () => {
       expect(mockCreateTag).toHaveBeenCalledWith(
         'v2.0.0',
         expect.any(Boolean),
-        expect.any(String)
+        false,
+        expect.any(String),
+        true
       );
       expect(mockSetFailed).not.toBeCalled();
     });
