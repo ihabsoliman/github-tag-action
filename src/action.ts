@@ -3,6 +3,7 @@ import { CommitParser } from 'conventional-commits-parser';
 import { gte, inc, parse, ReleaseType, SemVer, valid } from 'semver';
 import { analyzeCommits } from '@semantic-release/commit-analyzer';
 import { generateNotes } from '@semantic-release/release-notes-generator';
+import createConventionalCommitsPreset from 'conventional-changelog-conventionalcommits';
 import {
   filterTagsByBranchAncestry,
   getBranchFromRef,
@@ -217,15 +218,26 @@ export default async function main() {
       });
     }
 
+    const isDefaultCommitAnalyzerPreset =
+      commitAnalyzerPreset.toLowerCase() === 'angular';
+
+    const analyzeCommitsContext = {
+      commits,
+      logger: { log: console.info.bind(console) },
+      cwd: process.cwd(),
+    };
+
     let bump = await analyzeCommits(
       {
-        preset: commitAnalyzerPreset,
+        ...(isDefaultCommitAnalyzerPreset
+          ? {}
+          : { preset: commitAnalyzerPreset }),
         releaseRules: mappedReleaseRules
           ? // analyzeCommits doesn't appreciate rules with a section /shrug
             mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
           : undefined,
       },
-      { commits, logger: { log: console.info.bind(console) } },
+      analyzeCommitsContext,
     );
 
     // Determine if we should continue with tag creation based on main vs prerelease branch
@@ -298,22 +310,27 @@ export default async function main() {
   core.info(`New tag after applying prefix is ${newTag}.`);
   core.setOutput('new_tag', newTag);
 
+  const conventionalCommitsPreset = createConventionalCommitsPreset({
+    types: mergeWithDefaultChangelogRules(mappedReleaseRules),
+  });
+
+  const generateNotesContext = {
+    commits,
+    logger: { log: console.info.bind(console) },
+    cwd: process.cwd(),
+    options: {
+      repositoryUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}`,
+    },
+    lastRelease: { gitTag: latestTag.name },
+    nextRelease: { gitTag: newTag, version: newVersion },
+  };
+
   const changelog = await generateNotes(
     {
-      preset: 'conventionalcommits',
-      presetConfig: {
-        types: mergeWithDefaultChangelogRules(mappedReleaseRules),
-      },
+      parserOpts: conventionalCommitsPreset.parser,
+      writerOpts: conventionalCommitsPreset.writer,
     },
-    {
-      commits,
-      logger: { log: console.info.bind(console) },
-      options: {
-        repositoryUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}`,
-      },
-      lastRelease: { gitTag: latestTag.name },
-      nextRelease: { gitTag: newTag, version: newVersion },
-    },
+    generateNotesContext,
   );
   core.info(`Changelog is ${changelog}.`);
   core.setOutput('changelog', changelog);
