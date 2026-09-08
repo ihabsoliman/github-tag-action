@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "A GitHub Action to automatically bump and tag master, on merge, with the latest SemVer formatted version.",
-  "main": "lib/main.js",
+  "main": "lib/main.cjs",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --noEmit && node scripts/build.mjs",
     "test": "node --experimental-vm-modules node_modules/.bin/jest --testTimeout 10000",
     "check": "prettier --check ."
   },
@@ -35,8 +35,8 @@
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/release-notes-generator": "^14.1.1",
     "conventional-changelog-conventionalcommits": "^9.3.1",
-    "minimatch": "^10.2.6",
     "conventional-commits-parser": "^7.1.2",
+    "minimatch": "^10.2.6",
     "semver": "^7.8.5"
   },
   "devDependencies": {
@@ -47,6 +47,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.13.3",
     "@types/semver": "^7.8.0",
+    "esbuild": "^0.28.2",
     "jest": "^30.5.1",
     "jest-circus": "^30.5.1",
     "js-yaml": "^5.4.1",
