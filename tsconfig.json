@@ -1,11 +1,14 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",                     /* Concatenate and emit output to single file. */
+    "target": "es2023",
+    "module": "node16",                        /* Concatenate and emit output to single file. */
+    "moduleResolution": "node16",
+    "skipLibCheck": true,
     "outDir": "./lib",                        /* Redirect output structure to the directory. */
     "rootDir": "./src",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "types": ["node", "jest"]
   },
   "exclude": ["node_modules", "**/*.test.ts"]
 }

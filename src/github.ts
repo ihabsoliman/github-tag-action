@@ -1,7 +1,7 @@
 import { context, getOctokit } from '@actions/github';
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import { Await } from './ts';
+import { Await } from './ts.js';
 
 let octokitSingleton: ReturnType<typeof getOctokit>;
 
@@ -37,7 +37,7 @@ export async function listTags(
 ): Promise<Tag[]> {
   const octokit = getOctokitSingleton();
 
-  const tags = await octokit.repos.listTags({
+  const tags = await octokit.rest.repos.listTags({
     ...context.repo,
     per_page: 100,
     page,
@@ -96,7 +96,7 @@ export async function compareCommitsViaApi(
   for (let attempt = 1; attempt <= COMPARE_RETRY_ATTEMPTS; attempt++) {
     core.debug(`Compare API attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}`);
     try {
-      const commits = await octokit.repos.compareCommits({
+      const commits = await octokit.rest.repos.compareCommits({
         ...context.repo,
         base: baseRef,
         head: headRef,
@@ -213,11 +213,11 @@ export async function createTag(
 ) {
   const octokit = getOctokitSingleton();
   let annotatedTag:
-    | Await<ReturnType<typeof octokit.git.createTag>>
+    | Await<ReturnType<typeof octokit.rest.git.createTag>>
     | undefined = undefined;
   if (createAnnotatedTag) {
     core.debug(`Creating annotated tag.`);
-    annotatedTag = await octokit.git.createTag({
+    annotatedTag = await octokit.rest.git.createTag({
       ...context.repo,
       tag: newTag,
       message: newTag,
@@ -230,7 +230,7 @@ export async function createTag(
     core.debug(`Tag was not pushed to remote`);
   } else if (update) {
     core.info(`Updating existing tag ${newTag} on the repo.`);
-    await octokit.git.updateRef({
+    await octokit.rest.git.updateRef({
       ...context.repo,
       ref: `tags/${newTag}`,
       sha: annotatedTag ? annotatedTag.data.sha : GITHUB_SHA,
@@ -238,7 +238,7 @@ export async function createTag(
     });
   } else {
     core.info(`Pushing new tag to the repo.`);
-    await octokit.git.createRef({
+    await octokit.rest.git.createRef({
       ...context.repo,
       ref: `refs/tags/${newTag}`,
       sha: annotatedTag ? annotatedTag.data.sha : GITHUB_SHA,

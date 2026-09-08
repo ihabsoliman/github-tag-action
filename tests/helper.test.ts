@@ -1,4 +1,5 @@
-import yaml from 'js-yaml';
+import { describe, it } from '@jest/globals';
+import * as yaml from 'js-yaml';
 import fs from 'fs';
 import path from 'path';
 

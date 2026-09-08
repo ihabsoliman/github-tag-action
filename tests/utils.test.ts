@@ -1,12 +1,17 @@
-import * as utils from '../src/utils';
-import { getValidTags } from '../src/utils';
-import * as core from '@actions/core';
-import * as github from '../src/github';
-import { defaultChangelogRules } from '../src/defaults';
+import { jest, describe, it, expect } from '@jest/globals';
 
-jest.spyOn(core, 'debug').mockImplementation(() => {});
-jest.spyOn(core, 'warning').mockImplementation(() => {});
-jest.spyOn(core, 'info').mockImplementation(() => {});
+const getInputMock = jest.fn().mockReturnValue('');
+
+jest.unstable_mockModule('@actions/core', () => ({
+  debug: jest.fn(),
+  warning: jest.fn(),
+  info: jest.fn(),
+  getInput: getInputMock,
+}));
+
+const utils = await import('../src/utils.js');
+const { getValidTags } = utils;
+const { defaultChangelogRules } = await import('../src/defaults.js');
 
 const regex = /^v/;
 
@@ -201,7 +206,6 @@ describe('utils', () => {
       },
     ];
     
-    const getInputMock = jest.spyOn(core, 'getInput');
     getInputMock.mockImplementation((name) => {
       if (name === 'tag_search_pattern') {
         return 'v1.*';
@@ -221,9 +225,9 @@ describe('utils', () => {
     expect(validTags[0].name).toEqual('v1.3.0'); // Tags should be sorted, with v1.3.0 before v1.2.3
     expect(validTags[1].name).toEqual('v1.2.3');
     expect(validTags.find(tag => tag.name === 'v2.0.1')).toBeUndefined();
-    
+
     // Clean up
-    getInputMock.mockRestore();
+    getInputMock.mockReturnValue('');
   });
 
   describe('custom release types', () => {

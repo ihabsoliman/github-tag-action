@@ -1,11 +1,23 @@
 import * as core from '@actions/core';
 import { prerelease, rcompare, valid } from 'semver';
-// @ts-ignore
-import DEFAULT_RELEASE_TYPES from '@semantic-release/commit-analyzer/lib/default-release-types';
-import { compareCommits, Tags } from './github';
-import { defaultChangelogRules } from './defaults';
+import { compareCommits, Tags } from './github.js';
+import { defaultChangelogRules } from './defaults.js';
 import { context } from '@actions/github';
 import { minimatch } from 'minimatch';
+
+// Release types supported by semver/npm, matching
+// @semantic-release/commit-analyzer's own default-release-types constant
+// (mirrored locally since that package no longer exposes it as a subpath
+// import under its ESM-only exports map).
+const DEFAULT_RELEASE_TYPES = [
+  'major',
+  'premajor',
+  'minor',
+  'preminor',
+  'patch',
+  'prepatch',
+  'prerelease',
+];
 
 export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
   const tagSearchPattern = core.getInput('tag_search_pattern');

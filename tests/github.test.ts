@@ -1,32 +1,47 @@
-import { listTags } from '../src/github';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
-jest.mock(
-  '@actions/github',
-  jest.fn().mockImplementation(() => ({
-    context: { repo: { owner: 'mock-owner', repo: 'mock-repo' } },
-    getOctokit: jest.fn().mockReturnValue({
+const listTagsMock = jest.fn();
+const compareCommitsMock = jest.fn();
+const execMock = jest.fn();
+
+jest.unstable_mockModule('@actions/github', () => ({
+  context: { repo: { owner: 'mock-owner', repo: 'mock-repo' } },
+  getOctokit: jest.fn().mockReturnValue({
+    rest: {
       repos: {
-        listTags: jest.fn().mockImplementation(({ page }: { page: number }) => {
-          if (page === 6) {
-            return { data: [] };
-          }
-
-          const res = [...new Array(100).keys()].map((_) => ({
-            name: `v0.0.${_ + (page - 1) * 100}`,
-            commit: { sha: 'string', url: 'string' },
-            zipball_url: 'string',
-            tarball_url: 'string',
-            node_id: 'string',
-          }));
-
-          return { data: res };
-        }),
+        listTags: listTagsMock,
+        compareCommits: compareCommitsMock,
       },
-    }),
-  }))
-);
+    },
+  }),
+}));
+
+jest.unstable_mockModule('@actions/exec', () => ({
+  exec: (...args: unknown[]) => execMock(...args),
+}));
+
+const { listTags, compareCommits } = await import('../src/github.js');
 
 describe('github', () => {
+  beforeEach(() => {
+    listTagsMock.mockReset();
+    listTagsMock.mockImplementation(({ page }: { page: number }) => {
+      if (page === 6) {
+        return { data: [] };
+      }
+
+      const res = [...new Array(100).keys()].map((_) => ({
+        name: `v0.0.${_ + (page - 1) * 100}`,
+        commit: { sha: 'string', url: 'string' },
+        zipball_url: 'string',
+        tarball_url: 'string',
+        node_id: 'string',
+      }));
+
+      return { data: res };
+    });
+  });
+
   it('returns all tags', async () => {
     const tags = await listTags(true);
 
@@ -55,25 +70,9 @@ describe('github', () => {
 });
 
 describe('compareCommits', () => {
-  const compareCommitsMock = jest.fn();
-  const execMock = jest.fn();
-
-  jest.mock('@actions/exec', () => ({
-    exec: (...args: any[]) => execMock(...args),
-  }));
-
   beforeEach(() => {
-    jest.resetModules();
     compareCommitsMock.mockReset();
     execMock.mockReset();
-
-    jest.doMock('@actions/github', () => ({
-      context: { repo: { owner: 'mock-owner', repo: 'mock-repo' } },
-      getOctokit: jest.fn().mockReturnValue({
-        repos: { compareCommits: compareCommitsMock },
-      }),
-    }));
-    jest.doMock('@actions/exec', () => ({ exec: execMock }));
   });
 
   it('returns commits from the API on first success', async () => {
@@ -83,7 +82,6 @@ describe('compareCommits', () => {
       },
     });
 
-    const { compareCommits } = require('../src/github');
     const commits = await compareCommits('base', 'head');
 
     expect(commits).toEqual([
@@ -105,7 +103,6 @@ describe('compareCommits', () => {
         data: { commits: [{ sha: 'def', commit: { message: 'fix: bug' } }] },
       });
 
-    const { compareCommits } = require('../src/github');
     const commits = await compareCommits('base', 'head');
 
     expect(commits).toEqual([{ sha: 'def', commit: { message: 'fix: bug' } }]);
@@ -131,7 +128,6 @@ describe('compareCommits', () => {
       }
     );
 
-    const { compareCommits } = require('../src/github');
     const commits = await compareCommits('base', 'head');
 
     expect(commits).toEqual([
@@ -148,8 +144,6 @@ describe('compareCommits', () => {
     compareCommitsMock.mockRejectedValue(serverError);
     execMock.mockRejectedValue(new Error('fatal: bad revision'));
 
-    const { compareCommits } = require('../src/github');
-
     await expect(compareCommits('base', 'head')).rejects.toThrow(
       'Sorry, this diff is taking too long to generate.'
     );
@@ -159,8 +153,6 @@ describe('compareCommits', () => {
     const authError: any = new Error('Bad credentials');
     authError.status = 401;
     compareCommitsMock.mockRejectedValue(authError);
-
-    const { compareCommits } = require('../src/github');
 
     await expect(compareCommits('base', 'head')).rejects.toThrow(
       'Bad credentials'

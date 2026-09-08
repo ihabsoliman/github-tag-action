@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { sync as parser } from 'conventional-commits-parser';
+import { CommitParser } from 'conventional-commits-parser';
 import { gte, inc, parse, ReleaseType, SemVer, valid } from 'semver';
 import { analyzeCommits } from '@semantic-release/commit-analyzer';
 import { generateNotes } from '@semantic-release/release-notes-generator';
@@ -12,9 +12,9 @@ import {
   getValidTags,
   mapCustomReleaseRules,
   mergeWithDefaultChangelogRules,
-} from './utils';
-import { createTag, listTags } from './github';
-import { Await } from './ts';
+} from './utils.js';
+import { createTag, listTags } from './github.js';
+import { Await } from './ts.js';
 
 export default async function main() {
   core.setOutput('tag_created', 'false');
@@ -135,10 +135,11 @@ export default async function main() {
     core.debug('We found ' + commits.length + ' commits to consider!');
 
     if (scopes.length) {
+      const commitParser = new CommitParser();
       const isInScope = (scope: string) =>
         scopes.split(',').some((includedScope) => scope.match(includedScope));
       commits = commits.filter((commit) => {
-        const scope = parser(commit.message).scope;
+        const scope = commitParser.parse(commit.message).scope;
         if (scope) {
           const isInScopes = scopes
             .split(',')
