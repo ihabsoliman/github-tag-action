@@ -28,12 +28,9 @@ export default async function main() {
   const defaultBump = core.getInput('default_bump') as ReleaseType | 'false';
   const forceBump = core.getInput('force_bump') as ReleaseType | 'false' | '';
   const defaultPreReleaseBump = core.getInput('default_prerelease_bump') as
-    | ReleaseType
-    | 'false';
+    ReleaseType | 'false';
   const forcePreReleaseBump = core.getInput('force_prerelease_bump') as
-    | ReleaseType
-    | 'false'
-    | '';
+    ReleaseType | 'false' | '';
   const defaultDraftBump =
     (core.getInput('default_draft_bump') as ReleaseType | 'false') ||
     defaultPreReleaseBump;
@@ -45,7 +42,7 @@ export default async function main() {
   const scopes = core.getInput('scopes');
   const appendToPreReleaseTag = core.getInput('append_to_pre_release_tag');
   const createAnnotatedTag = /true/i.test(
-    core.getInput('create_annotated_tag')
+    core.getInput('create_annotated_tag'),
   );
   const dryRun = core.getInput('dry_run');
   const customReleaseRules = core.getInput('custom_release_rules');
@@ -59,7 +56,7 @@ export default async function main() {
 
   if (tagMessage && !createAnnotatedTag) {
     core.warning(
-      'tag_message was set but create_annotated_tag is false; tag_message is ignored for lightweight tags.'
+      'tag_message was set but create_annotated_tag is false; tag_message is ignored for lightweight tags.',
     );
   }
 
@@ -75,7 +72,7 @@ export default async function main() {
     tagContext = tagContextInput as TagContext;
   } else {
     core.warning(
-      `${tagContextInput} is not a valid tag_context. Falling back to repo.`
+      `${tagContextInput} is not a valid tag_context. Falling back to repo.`,
     );
   }
 
@@ -85,7 +82,7 @@ export default async function main() {
     branchHistory = branchHistoryInput as BranchHistory;
   } else {
     core.warning(
-      `${branchHistoryInput} is not a valid branch_history. Falling back to compare.`
+      `${branchHistoryInput} is not a valid branch_history. Falling back to compare.`,
     );
   }
 
@@ -144,12 +141,12 @@ export default async function main() {
     validTags,
     prefixRegex,
     tagPrefix,
-    initialVersion
+    initialVersion,
   );
   const latestPrereleaseTag = getLatestPrereleaseTag(
     validTags,
     identifier,
-    prefixRegex
+    prefixRegex,
   );
 
   let commits: Await<ReturnType<typeof getCommits>>;
@@ -160,7 +157,7 @@ export default async function main() {
     commits = await getCommits(
       latestTag.commit.sha,
       commitRef,
-      commitRangeOptions
+      commitRangeOptions,
     );
 
     core.setOutput('release_type', 'custom');
@@ -173,7 +170,7 @@ export default async function main() {
     } else {
       previousTag = gte(
         latestTag.name.replace(prefixRegex, ''),
-        latestPrereleaseTag.name.replace(prefixRegex, '')
+        latestPrereleaseTag.name.replace(prefixRegex, ''),
       )
         ? latestTag
         : latestPrereleaseTag;
@@ -190,7 +187,7 @@ export default async function main() {
     }
 
     core.info(
-      `Previous tag was ${previousTag.name}, previous version was ${previousVersion.version}.`
+      `Previous tag was ${previousTag.name}, previous version was ${previousVersion.version}.`,
     );
     core.setOutput('previous_version', previousVersion.version);
     core.setOutput('previous_tag', previousTag.name);
@@ -199,7 +196,7 @@ export default async function main() {
     commits = await getCommits(
       previousTag.commit.sha,
       commitRef,
-      commitRangeOptions
+      commitRangeOptions,
     );
     core.debug('We found ' + commits.length + ' commits to consider!');
 
@@ -228,7 +225,7 @@ export default async function main() {
             mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
           : undefined,
       },
-      { commits, logger: { log: console.info.bind(console) } }
+      { commits, logger: { log: console.info.bind(console) } },
     );
 
     // Determine if we should continue with tag creation based on main vs prerelease branch
@@ -256,7 +253,7 @@ export default async function main() {
     // Default bump is set to false and we did not find an automatic bump
     if (!shouldContinue) {
       core.debug(
-        'No commit specifies the version bump. Skipping the tag creation.'
+        'No commit specifies the version bump. Skipping the tag creation.',
       );
       return;
     }
@@ -316,14 +313,14 @@ export default async function main() {
       },
       lastRelease: { gitTag: latestTag.name },
       nextRelease: { gitTag: newTag, version: newVersion },
-    }
+    },
   );
   core.info(`Changelog is ${changelog}.`);
   core.setOutput('changelog', changelog);
 
   if (!isReleaseBranch && !isPreReleaseBranch) {
     core.info(
-      'This branch is neither a release nor a pre-release branch. Skipping the tag creation.'
+      'This branch is neither a release nor a pre-release branch. Skipping the tag creation.',
     );
     return;
   }
@@ -345,7 +342,7 @@ export default async function main() {
     tagExists,
     commitRef,
     pushTag,
-    tagMessage
+    tagMessage,
   );
   core.setOutput('tag_created', 'true');
 }

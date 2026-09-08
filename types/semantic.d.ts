@@ -24,7 +24,7 @@ declare module '@semantic-release/commit-analyzer' {
     args: {
       commits: { message: string; hash: string | null }[];
       logger: { log: (args: any) => void };
-    }
+    },
   ): Promise<any>;
 }
 
@@ -52,6 +52,6 @@ declare module '@semantic-release/release-notes-generator' {
       };
       lastRelease: { gitTag: string };
       nextRelease: { gitTag: string; version: string };
-    }
+    },
   ): Promise<string>;
 }

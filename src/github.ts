@@ -47,7 +47,7 @@ export function getOctokitSingleton() {
 export async function listTags(
   shouldFetchAllTags = false,
   fetchedTags: Tag[] = [],
-  page = 1
+  page = 1,
 ): Promise<Tag[]> {
   const octokit = getOctokitSingleton();
 
@@ -103,7 +103,7 @@ type CompareCommitsResponseData = Await<
 
 async function compareCommitsRequest(
   baseRef: string,
-  headRef: string
+  headRef: string,
 ): Promise<CompareCommitsResponseData> {
   const octokit = getOctokitSingleton();
 
@@ -132,7 +132,7 @@ async function compareCommitsRequest(
       }
 
       core.debug(
-        `compareCommits API call failed (attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}): ${error?.message}. Retrying in ${COMPARE_RETRY_DELAY_MS}ms.`
+        `compareCommits API call failed (attempt ${attempt}/${COMPARE_RETRY_ATTEMPTS}): ${error?.message}. Retrying in ${COMPARE_RETRY_DELAY_MS}ms.`,
       );
       await sleep(COMPARE_RETRY_DELAY_MS);
     }
@@ -150,7 +150,7 @@ async function compareCommitsRequest(
  */
 export async function compareCommitsViaApi(
   baseRef: string,
-  headRef: string
+  headRef: string,
 ): Promise<CommitLike[]> {
   const data = await compareCommitsRequest(baseRef, headRef);
   return data.commits;
@@ -163,7 +163,7 @@ export async function compareCommitsViaApi(
  */
 export async function getCompareStatus(
   baseRef: string,
-  headRef: string
+  headRef: string,
 ): Promise<CompareStatus> {
   const data = await compareCommitsRequest(baseRef, headRef);
   return data.status as CompareStatus;
@@ -179,7 +179,7 @@ export async function getCompareStatus(
 export async function compareCommitsViaLocalGit(
   baseRef: string | undefined,
   headRef: string,
-  options: GitOptions = {}
+  options: GitOptions = {},
 ): Promise<CommitLike[]> {
   const range = baseRef ? `${baseRef}..${headRef}` : headRef;
   core.info(`Comparing commits via local git (${range})`);
@@ -190,7 +190,12 @@ export async function compareCommitsViaLocalGit(
 
   await exec.exec(
     'git',
-    ['log', '--reverse', range, `--pretty=format:%H${FIELD_SEP}%B${RECORD_SEP}`],
+    [
+      'log',
+      '--reverse',
+      range,
+      `--pretty=format:%H${FIELD_SEP}%B${RECORD_SEP}`,
+    ],
     {
       silent: true,
       cwd: options.gitCwd,
@@ -199,7 +204,7 @@ export async function compareCommitsViaLocalGit(
           output += data.toString();
         },
       },
-    }
+    },
   );
 
   return output
@@ -233,7 +238,7 @@ export async function isShallowRepository(gitCwd?: string): Promise<boolean> {
             output += data.toString();
           },
         },
-      }
+      },
     );
     if (exitCode !== 0) {
       return true;
@@ -251,7 +256,7 @@ export async function isShallowRepository(gitCwd?: string): Promise<boolean> {
  */
 export async function listMergedTags(
   sha: string,
-  gitCwd?: string
+  gitCwd?: string,
 ): Promise<string[]> {
   let output = '';
   await exec.exec('git', ['tag', '--list', '--merged', sha], {
@@ -299,7 +304,7 @@ export async function getLastCommit(ref: string): Promise<CommitLike> {
 export async function compareCommits(
   baseRef: string,
   headRef: string,
-  options: GitOptions = {}
+  options: GitOptions = {},
 ): Promise<CommitLike[]> {
   try {
     return await compareCommitsViaApi(baseRef, headRef);
@@ -309,13 +314,13 @@ export async function compareCommits(
     }
 
     core.warning(
-      `Falling back to local git log after compare API failure: ${apiError?.message}`
+      `Falling back to local git log after compare API failure: ${apiError?.message}`,
     );
     try {
       return await compareCommitsViaLocalGit(baseRef, headRef, options);
     } catch (gitError: any) {
       core.warning(
-        `Local git log fallback also failed: ${gitError?.message}. Re-throwing original API error.`
+        `Local git log fallback also failed: ${gitError?.message}. Re-throwing original API error.`,
       );
       throw apiError;
     }
@@ -335,7 +340,7 @@ export async function compareCommits(
 export async function getCommitRange(
   baseRef: string,
   headRef: string,
-  options: CommitRangeOptions = {}
+  options: CommitRangeOptions = {},
 ): Promise<CommitLike[]> {
   const { branchHistory, defaultBranch, currentBranch, ...gitOptions } =
     options;
@@ -347,7 +352,7 @@ export async function getCommitRange(
   if (branchHistory === 'full') {
     if (await isShallowRepository(gitOptions.gitCwd)) {
       core.warning(
-        'branch_history: full requires a full clone (fetch-depth: 0); the checkout is shallow. Falling back to compare.'
+        'branch_history: full requires a full clone (fetch-depth: 0); the checkout is shallow. Falling back to compare.',
       );
       return compareCommits(baseRef, headRef, gitOptions);
     }
@@ -361,7 +366,7 @@ export async function getCommitRange(
       return await compareCommitsViaLocalGit(fullBase, headRef, gitOptions);
     } catch (error: any) {
       core.warning(
-        `branch_history: full failed to read local git history: ${error?.message}. Falling back to compare.`
+        `branch_history: full failed to read local git history: ${error?.message}. Falling back to compare.`,
       );
       return compareCommits(baseRef, headRef, gitOptions);
     }
@@ -376,12 +381,12 @@ export async function createTag(
   update: boolean,
   GITHUB_SHA: string,
   pushTag: boolean = true,
-  tagMessage: string = ''
+  tagMessage: string = '',
 ) {
   const octokit = getOctokitSingleton();
   let annotatedTag:
-    | Await<ReturnType<typeof octokit.rest.git.createTag>>
-    | undefined = undefined;
+    Await<ReturnType<typeof octokit.rest.git.createTag>> | undefined =
+    undefined;
   if (createAnnotatedTag) {
     core.debug(`Creating annotated tag.`);
     annotatedTag = await octokit.rest.git.createTag({

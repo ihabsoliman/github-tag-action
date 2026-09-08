@@ -32,7 +32,7 @@ export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
   const tagSearchPattern = core.getInput('tag_search_pattern');
   const invalidTags = tags.filter(
     (tag) =>
-      !prefixRegex.test(tag.name) || !valid(tag.name.replace(prefixRegex, ''))
+      !prefixRegex.test(tag.name) || !valid(tag.name.replace(prefixRegex, '')),
   );
 
   invalidTags.forEach((tag) => core.debug(`Found Invalid Tag: ${tag.name}.`));
@@ -40,10 +40,13 @@ export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
   let validTags = tags
     .filter(
       (tag) =>
-        prefixRegex.test(tag.name) && valid(tag.name.replace(prefixRegex, ''))
+        prefixRegex.test(tag.name) && valid(tag.name.replace(prefixRegex, '')),
     )
     .sort((a, b) =>
-      rcompare(a.name.replace(prefixRegex, ''), b.name.replace(prefixRegex, ''))
+      rcompare(
+        a.name.replace(prefixRegex, ''),
+        b.name.replace(prefixRegex, ''),
+      ),
     );
 
   // Apply tag_search_pattern filtering if provided
@@ -56,7 +59,7 @@ export async function getValidTags(tags: Tags, prefixRegex: RegExp) {
       }
       return matches;
     });
-    
+
     if (validTags.length === 0) {
       core.warning(`No tags match the provided pattern: ${tagSearchPattern}`);
     }
@@ -76,14 +79,14 @@ interface FinalCommit {
 export async function getCommits(
   baseRef: string,
   headRef: string,
-  options: CommitRangeOptions = {}
+  options: CommitRangeOptions = {},
 ): Promise<{ message: string; hash: string | null }[]> {
   let commits: Array<FinalCommit>;
   commits = await getCommitRange(baseRef, headRef, options);
   core.info('We found ' + commits.length + ' commits using classic compare!');
   if (commits.length < 1) {
     core.info(
-      'We did not find enough commits, attempting to scan closed PR method.'
+      'We did not find enough commits, attempting to scan closed PR method.',
     );
     commits = getClosedPRCommits();
   }
@@ -106,7 +109,7 @@ function getClosedPRCommits() {
     core.debug(JSON.stringify(context.payload.commits));
     let pr_commit_count = context.payload.commits.length;
     core.info(
-      'We found ' + pr_commit_count + ' commits from the Closed PR method.'
+      'We found ' + pr_commit_count + ' commits from the Closed PR method.',
     );
     commits = context.payload.commits
       .filter((commit: FinalCommit) => !!commit.commit.message)
@@ -115,7 +118,9 @@ function getClosedPRCommits() {
         hash: commit.sha,
       }));
     core.debug(
-      'After processing we are going to present ' + commits.length + ' commits!'
+      'After processing we are going to present ' +
+        commits.length +
+        ' commits!',
     );
   }
   return commits;
@@ -133,13 +138,13 @@ export function getLatestTag(
   tags: Tags,
   prefixRegex: RegExp,
   tagPrefix: string,
-  initialVersion: string = '0.0.0'
+  initialVersion: string = '0.0.0',
 ) {
   return (
     tags.find(
       (tag) =>
         prefixRegex.test(tag.name) &&
-        !prerelease(tag.name.replace(prefixRegex, ''))
+        !prerelease(tag.name.replace(prefixRegex, '')),
     ) || {
       name: `${tagPrefix}${initialVersion}`,
       commit: {
@@ -152,7 +157,7 @@ export function getLatestTag(
 export function getLatestPrereleaseTag(
   tags: Tags,
   identifier: string,
-  prefixRegex: RegExp
+  prefixRegex: RegExp,
 ) {
   return tags
     .filter((tag) => prerelease(tag.name.replace(prefixRegex, '')))
@@ -181,7 +186,7 @@ export async function filterTagsByBranchAncestry(
   tags: Tags,
   sha: string,
   prefixRegex: RegExp,
-  options: { gitCwd?: string } = {}
+  options: { gitCwd?: string } = {},
 ): Promise<Tags> {
   if (tags.length === 0) {
     return tags;
@@ -192,22 +197,22 @@ export async function filterTagsByBranchAncestry(
       const mergedTagNames = await listMergedTags(sha, options.gitCwd);
       if (mergedTagNames.length > 0) {
         core.info(
-          'tag_context: branch - using local git ancestry (git tag --list --merged).'
+          'tag_context: branch - using local git ancestry (git tag --list --merged).',
         );
         const mergedTagNameSet = new Set(mergedTagNames);
         return tags.filter((tag) => mergedTagNameSet.has(tag.name));
       }
       core.info(
-        'tag_context: branch - local git reported no merged tags; falling back to the API scan (tags may never have been fetched locally).'
+        'tag_context: branch - local git reported no merged tags; falling back to the API scan (tags may never have been fetched locally).',
       );
     } catch (error: any) {
       core.warning(
-        `tag_context: branch - local git ancestry check failed: ${error?.message}. Falling back to the API scan.`
+        `tag_context: branch - local git ancestry check failed: ${error?.message}. Falling back to the API scan.`,
       );
     }
   } else {
     core.info(
-      'tag_context: branch - checkout is shallow; using the API scan instead of local git.'
+      'tag_context: branch - checkout is shallow; using the API scan instead of local git.',
     );
   }
 
@@ -217,7 +222,7 @@ export async function filterTagsByBranchAncestry(
   for (const tag of tags) {
     if (scans >= ANCESTRY_API_SCAN_LIMIT) {
       core.warning(
-        `tag_context: branch - reached the API scan limit (${ANCESTRY_API_SCAN_LIMIT}); remaining tags were not checked.`
+        `tag_context: branch - reached the API scan limit (${ANCESTRY_API_SCAN_LIMIT}); remaining tags were not checked.`,
       );
       break;
     }
@@ -228,7 +233,7 @@ export async function filterTagsByBranchAncestry(
       status = await getCompareStatus(tag.commit.sha, sha);
     } catch (error: any) {
       core.warning(
-        `tag_context: branch - ancestry check failed for tag ${tag.name}: ${error?.message}. Skipping.`
+        `tag_context: branch - ancestry check failed for tag ${tag.name}: ${error?.message}. Skipping.`,
       );
       continue;
     }
@@ -259,7 +264,7 @@ export function mapCustomReleaseRules(customReleaseTypes: string) {
 
       if (parts.length < 2) {
         core.warning(
-          `${customReleaseRule} is not a valid custom release definition.`
+          `${customReleaseRule} is not a valid custom release definition.`,
         );
         return false;
       }
@@ -267,12 +272,12 @@ export function mapCustomReleaseRules(customReleaseTypes: string) {
       const defaultRule = defaultChangelogRules[parts[0].toLowerCase()];
       if (customReleaseRule.length !== 3) {
         core.debug(
-          `${customReleaseRule} doesn't mention the section for the changelog.`
+          `${customReleaseRule} doesn't mention the section for the changelog.`,
         );
         core.debug(
           defaultRule
             ? `Default section (${defaultRule.section}) will be used instead.`
-            : "The commits matching this rule won't be included in the changelog."
+            : "The commits matching this rule won't be included in the changelog.",
         );
       }
 
@@ -297,14 +302,14 @@ export function mapCustomReleaseRules(customReleaseTypes: string) {
 }
 
 export function mergeWithDefaultChangelogRules(
-  mappedReleaseRules: ReturnType<typeof mapCustomReleaseRules> = []
+  mappedReleaseRules: ReturnType<typeof mapCustomReleaseRules> = [],
 ) {
   const mergedRules = mappedReleaseRules.reduce(
     (acc, curr) => ({
       ...acc,
       [curr.type]: curr,
     }),
-    { ...defaultChangelogRules }
+    { ...defaultChangelogRules },
   );
 
   return Object.values(mergedRules).filter((rule) => !!rule.section);

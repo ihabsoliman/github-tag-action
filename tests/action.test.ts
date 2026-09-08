@@ -1,4 +1,11 @@
-import { jest, describe, it, expect, beforeAll, beforeEach } from '@jest/globals';
+import {
+  jest,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+} from '@jest/globals';
 import {
   clearInputs,
   loadDefaultInputs,
@@ -62,7 +69,7 @@ describe('github-tag-action', () => {
     // filtering logic instead of an implementation left over from another test.
     getValidTagsMock.mockImplementation(realUtils.getValidTags);
     filterTagsByBranchAncestryMock.mockImplementation(
-      async (tags: unknown) => tags
+      async (tags: unknown) => tags,
     );
     setBranch('master');
     setCommitSha('79e0ea271c26aa152beef77c3275ff7b8f8d8274');
@@ -95,7 +102,7 @@ describe('github-tag-action', () => {
        * When / Then
        */
       await expect(action()).rejects.toThrow(
-        'Missing commit_sha or GITHUB_SHA.'
+        'Missing commit_sha or GITHUB_SHA.',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -105,8 +112,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'fix: this is my first fix', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags: any[] = [];
       listTagsMock.mockImplementation(async () => validTags);
@@ -125,7 +131,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -135,8 +141,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits: any[] = [];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags: any[] = [];
       listTagsMock.mockImplementation(async () => validTags);
@@ -155,7 +160,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -164,10 +169,9 @@ describe('github-tag-action', () => {
       /*
        * Given
        */
-      getCommitsMock
-        .mockRejectedValue(
-          new Error('Sorry, this diff is taking too long to generate.')
-        );
+      getCommitsMock.mockRejectedValue(
+        new Error('Sorry, this diff is taking too long to generate.'),
+      );
 
       const validTags: any[] = [];
       listTagsMock.mockImplementation(async () => validTags);
@@ -176,7 +180,7 @@ describe('github-tag-action', () => {
        * When / Then
        */
       await expect(action()).rejects.toThrow(
-        'Sorry, this diff is taking too long to generate.'
+        'Sorry, this diff is taking too long to generate.',
       );
       expect(mockCreateTag).not.toHaveBeenCalled();
       expect(mockSetOutput).toHaveBeenCalledWith('tag_created', 'false');
@@ -189,8 +193,7 @@ describe('github-tag-action', () => {
        */
       setInput('default_bump', 'false');
       const commits: any[] = [];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -224,8 +227,7 @@ describe('github-tag-action', () => {
         { message: 'james: is the new cool guy', hash: null },
         { message: 'bond: is his last name', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -252,7 +254,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -266,8 +268,7 @@ describe('github-tag-action', () => {
         { message: 'fix: is the new cool guy', hash: null },
         { message: 'feat: is his last name', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -294,7 +295,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -313,8 +314,7 @@ describe('github-tag-action', () => {
         },
         { message: 'james: this should make a preminor', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -341,7 +341,7 @@ describe('github-tag-action', () => {
         true,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -352,8 +352,7 @@ describe('github-tag-action', () => {
        */
       setInput('push_tag', 'false');
       const commits: any[] = [];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags: any[] = [];
       listTagsMock.mockImplementation(async () => validTags);
@@ -370,7 +369,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         false,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -384,8 +383,7 @@ describe('github-tag-action', () => {
         { message: 'fix(YES): 1ne', hash: null },
         { message: 'feat(NO): 2wo', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -412,7 +410,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -431,8 +429,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'fix: this is my first fix', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -459,7 +456,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -471,8 +468,7 @@ describe('github-tag-action', () => {
       const commits = [
         { message: 'feat: this is my first feature', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -499,7 +495,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -512,8 +508,7 @@ describe('github-tag-action', () => {
       const commits = [
         { message: 'feat: this is my first feature', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -540,7 +535,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -556,8 +551,7 @@ describe('github-tag-action', () => {
           hash: null,
         },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -584,7 +578,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -600,8 +594,7 @@ describe('github-tag-action', () => {
           hash: null,
         },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -628,7 +621,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -644,8 +637,7 @@ describe('github-tag-action', () => {
           hash: null,
         },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -672,7 +664,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -684,8 +676,7 @@ describe('github-tag-action', () => {
       const commits = [
         { message: 'feat: some new feature on a release branch', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -726,7 +717,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -743,8 +734,7 @@ describe('github-tag-action', () => {
         },
         { message: 'james: this should make a preminor', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -771,7 +761,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -792,8 +782,7 @@ describe('github-tag-action', () => {
        */
       setInput('default_prerelease_bump', 'false');
       const commits: any[] = [];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -804,8 +793,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -825,8 +813,7 @@ describe('github-tag-action', () => {
        */
       setInput('force_prerelease_bump', 'prerelease');
       const commits = [{ message: 'this is my first fix', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -837,8 +824,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -854,7 +840,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -865,8 +851,7 @@ describe('github-tag-action', () => {
        */
       setInput('default_prerelease_bump', 'prerelease');
       const commits = [{ message: 'this is my first fix', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -877,8 +862,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -894,7 +878,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -905,8 +889,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'this is a commit', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -917,8 +900,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -937,7 +919,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -948,8 +930,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'this is a commit', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -967,8 +948,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -987,7 +967,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -998,8 +978,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'this is a commit', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1017,8 +996,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1037,7 +1015,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1051,8 +1029,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'this is a commit', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1063,8 +1040,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1082,7 +1058,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1096,8 +1072,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'this is a commit', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1108,8 +1083,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1127,7 +1101,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1137,8 +1111,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'fix: this is my first fix', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1149,8 +1122,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1166,7 +1138,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1178,8 +1150,7 @@ describe('github-tag-action', () => {
       const commits = [
         { message: 'feat: this is my first feature', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1190,8 +1161,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1207,7 +1177,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1223,8 +1193,7 @@ describe('github-tag-action', () => {
           hash: null,
         },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1235,8 +1204,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1252,7 +1220,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1267,8 +1235,7 @@ describe('github-tag-action', () => {
           hash: null,
         },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1293,8 +1260,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1310,7 +1276,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1327,8 +1293,7 @@ describe('github-tag-action', () => {
         },
         { message: 'james: this should make a preminor', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1339,8 +1304,7 @@ describe('github-tag-action', () => {
           node_id: 'string',
         },
       ];
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1356,7 +1320,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1375,8 +1339,7 @@ describe('github-tag-action', () => {
        * Given
        */
       const commits = [{ message: 'fix: this is my first fix', hash: null }];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1409,8 +1372,7 @@ describe('github-tag-action', () => {
       const commits = [
         { message: 'feat: this is my first feature', hash: null },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1447,8 +1409,7 @@ describe('github-tag-action', () => {
           hash: null,
         },
       ];
-      getCommitsMock
-        .mockImplementation(async (sha) => commits);
+      getCommitsMock.mockImplementation(async (sha) => commits);
 
       const validTags = [
         {
@@ -1460,8 +1421,7 @@ describe('github-tag-action', () => {
         },
       ];
       listTagsMock.mockImplementation(async () => validTags);
-      getValidTagsMock
-        .mockImplementation(async () => validTags);
+      getValidTagsMock.mockImplementation(async () => validTags);
 
       /*
        * When
@@ -1497,7 +1457,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        'Release notes'
+        'Release notes',
       );
     });
 
@@ -1510,7 +1470,7 @@ describe('github-tag-action', () => {
         false,
         expect.any(String),
         true,
-        ''
+        '',
       );
     });
 
@@ -1521,7 +1481,7 @@ describe('github-tag-action', () => {
       await action();
 
       expect(mockWarning).toHaveBeenCalledWith(
-        expect.stringContaining('tag_message')
+        expect.stringContaining('tag_message'),
       );
     });
 
@@ -1531,7 +1491,7 @@ describe('github-tag-action', () => {
       await action();
 
       expect(mockWarning).not.toHaveBeenCalledWith(
-        expect.stringContaining('tag_message')
+        expect.stringContaining('tag_message'),
       );
     });
   });
@@ -1566,7 +1526,7 @@ describe('github-tag-action', () => {
       setInput('initial_version', 'not-a-semver');
 
       await expect(action()).rejects.toThrow(
-        'not-a-semver is not a valid semver.'
+        'not-a-semver is not a valid semver.',
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1618,7 +1578,7 @@ describe('github-tag-action', () => {
         [releaseTag],
         expect.any(String),
         expect.any(RegExp),
-        { gitCwd: '/repo/checkout' }
+        { gitCwd: '/repo/checkout' },
       );
       expect(mockSetOutput).toHaveBeenCalledWith('previous_version', '1.0.0');
     });
@@ -1656,7 +1616,7 @@ describe('github-tag-action', () => {
       await action();
 
       expect(mockWarning).toHaveBeenCalledWith(
-        expect.stringContaining('tag_context')
+        expect.stringContaining('tag_context'),
       );
       expect(filterTagsByBranchAncestryMock).not.toHaveBeenCalled();
     });
@@ -1683,7 +1643,7 @@ describe('github-tag-action', () => {
           branchHistory: 'full',
           defaultBranch: 'main',
           currentBranch: 'master',
-        })
+        }),
       );
     });
 
@@ -1693,7 +1653,7 @@ describe('github-tag-action', () => {
       expect(getCommitsMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(String),
-        expect.objectContaining({ branchHistory: 'compare' })
+        expect.objectContaining({ branchHistory: 'compare' }),
       );
     });
 
@@ -1703,12 +1663,12 @@ describe('github-tag-action', () => {
       await action();
 
       expect(mockWarning).toHaveBeenCalledWith(
-        expect.stringContaining('branch_history')
+        expect.stringContaining('branch_history'),
       );
       expect(getCommitsMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(String),
-        expect.objectContaining({ branchHistory: 'compare' })
+        expect.objectContaining({ branchHistory: 'compare' }),
       );
     });
   });
@@ -1729,7 +1689,7 @@ describe('github-tag-action', () => {
       expect(getCommitsMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(String),
-        expect.objectContaining({ gitCwd: '/some/checkout' })
+        expect.objectContaining({ gitCwd: '/some/checkout' }),
       );
     });
 
@@ -1739,7 +1699,7 @@ describe('github-tag-action', () => {
       expect(getCommitsMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.any(String),
-        expect.objectContaining({ gitCwd: '.' })
+        expect.objectContaining({ gitCwd: '.' }),
       );
     });
   });

@@ -6,7 +6,7 @@ module.exports = {
   testRunner: 'jest-circus/runner',
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1'
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   transform: {
     '^.+\\.ts$': [
@@ -14,11 +14,11 @@ module.exports = {
       {
         jsc: {
           parser: { syntax: 'typescript' },
-          target: 'es2022'
+          target: 'es2022',
         },
-        module: { type: 'es6' }
-      }
-    ]
+        module: { type: 'es6' },
+      },
+    ],
   },
-  verbose: true
-}
+  verbose: true,
+};

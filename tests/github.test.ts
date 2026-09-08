@@ -113,7 +113,7 @@ describe('compareCommits', () => {
 
   it('retries transient 500-class API errors before succeeding', async () => {
     const serverError: any = new Error(
-      'Server Error: Sorry, this diff is taking too long to generate.'
+      'Server Error: Sorry, this diff is taking too long to generate.',
     );
     serverError.status = 500;
 
@@ -132,7 +132,7 @@ describe('compareCommits', () => {
 
   it('falls back to local git log when the API keeps failing', async () => {
     const serverError: any = new Error(
-      'Server Error: Sorry, this diff is taking too long to generate.'
+      'Server Error: Sorry, this diff is taking too long to generate.',
     );
     serverError.status = 500;
     compareCommitsMock.mockRejectedValue(serverError);
@@ -141,11 +141,11 @@ describe('compareCommits', () => {
       (_cmd: string, _args: string[], options: any) => {
         options.listeners.stdout(
           Buffer.from(
-            'sha1\x1fcommit message one\x1e\nsha2\x1fcommit message two\x1e\n'
-          )
+            'sha1\x1fcommit message one\x1e\nsha2\x1fcommit message two\x1e\n',
+          ),
         );
         return Promise.resolve(0);
-      }
+      },
     );
 
     const commits = await compareCommits('base', 'head');
@@ -158,14 +158,14 @@ describe('compareCommits', () => {
 
   it('re-throws the original API error if the local git fallback also fails', async () => {
     const serverError: any = new Error(
-      'Server Error: Sorry, this diff is taking too long to generate.'
+      'Server Error: Sorry, this diff is taking too long to generate.',
     );
     serverError.status = 500;
     compareCommitsMock.mockRejectedValue(serverError);
     execMock.mockRejectedValue(new Error('fatal: bad revision'));
 
     await expect(compareCommits('base', 'head')).rejects.toThrow(
-      'Sorry, this diff is taking too long to generate.'
+      'Sorry, this diff is taking too long to generate.',
     );
   }, 10000);
 
@@ -175,7 +175,7 @@ describe('compareCommits', () => {
     compareCommitsMock.mockRejectedValue(authError);
 
     await expect(compareCommits('base', 'head')).rejects.toThrow(
-      'Bad credentials'
+      'Bad credentials',
     );
     expect(compareCommitsMock).toHaveBeenCalledTimes(1);
     expect(execMock).not.toHaveBeenCalled();
@@ -189,7 +189,7 @@ describe('compareCommits', () => {
       (_cmd: string, _args: string[], options: any) => {
         options.listeners.stdout(Buffer.from(''));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await compareCommits('base', 'head', { gitCwd: '/repo/checkout' });
@@ -197,7 +197,7 @@ describe('compareCommits', () => {
     expect(execMock).toHaveBeenCalledWith(
       'git',
       expect.any(Array),
-      expect.objectContaining({ cwd: '/repo/checkout' })
+      expect.objectContaining({ cwd: '/repo/checkout' }),
     );
   }, 10000);
 });
@@ -212,7 +212,7 @@ describe('compareCommitsViaLocalGit', () => {
       (_cmd: string, args: string[], options: any) => {
         options.listeners.stdout(Buffer.from(''));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await compareCommitsViaLocalGit('base', 'head');
@@ -220,7 +220,7 @@ describe('compareCommitsViaLocalGit', () => {
     expect(execMock).toHaveBeenCalledWith(
       'git',
       expect.arrayContaining(['base..head']),
-      expect.anything()
+      expect.anything(),
     );
   });
 
@@ -229,7 +229,7 @@ describe('compareCommitsViaLocalGit', () => {
       (_cmd: string, args: string[], options: any) => {
         options.listeners.stdout(Buffer.from(''));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await compareCommitsViaLocalGit(undefined, 'head');
@@ -237,7 +237,7 @@ describe('compareCommitsViaLocalGit', () => {
     expect(execMock).toHaveBeenCalledWith(
       'git',
       expect.arrayContaining(['head']),
-      expect.anything()
+      expect.anything(),
     );
     const args = execMock.mock.calls[0][1] as string[];
     expect(args).not.toContain('..head');
@@ -254,7 +254,7 @@ describe('isShallowRepository', () => {
       (_cmd: string, _args: string[], options: any) => {
         options.listeners.stdout(Buffer.from('true\n'));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await expect(isShallowRepository()).resolves.toBe(true);
@@ -265,7 +265,7 @@ describe('isShallowRepository', () => {
       (_cmd: string, _args: string[], options: any) => {
         options.listeners.stdout(Buffer.from('false\n'));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await expect(isShallowRepository()).resolves.toBe(false);
@@ -282,7 +282,7 @@ describe('isShallowRepository', () => {
       (_cmd: string, _args: string[], options: any) => {
         options.listeners.stdout(Buffer.from(''));
         return Promise.resolve(1);
-      }
+      },
     );
 
     await expect(isShallowRepository()).resolves.toBe(true);
@@ -299,7 +299,7 @@ describe('listMergedTags', () => {
       (_cmd: string, _args: string[], options: any) => {
         options.listeners.stdout(Buffer.from('v1.0.0\nv1.1.0\n'));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await expect(listMergedTags('sha')).resolves.toEqual(['v1.0.0', 'v1.1.0']);
@@ -374,7 +374,7 @@ describe('getCommitRange', () => {
         }
         options.listeners.stdout(Buffer.from(''));
         return Promise.resolve(0);
-      }
+      },
     );
     compareCommitsMock.mockResolvedValue({
       data: { commits: [{ sha: 'x', commit: { message: 'fix: y' } }] },
@@ -394,11 +394,9 @@ describe('getCommitRange', () => {
           options.listeners.stdout(Buffer.from('false\n'));
           return Promise.resolve(0);
         }
-        options.listeners.stdout(
-          Buffer.from('sha1\x1ffull log commit\x1e\n')
-        );
+        options.listeners.stdout(Buffer.from('sha1\x1ffull log commit\x1e\n'));
         return Promise.resolve(0);
-      }
+      },
     );
 
     const commits = await getCommitRange('base', 'head', {
@@ -411,7 +409,7 @@ describe('getCommitRange', () => {
       { sha: 'sha1', commit: { message: 'full log commit' } },
     ]);
     const logCall = execMock.mock.calls.find(
-      (call) => call[1][0] === 'log'
+      (call) => call[1][0] === 'log',
     ) as any[];
     expect(logCall[1]).toContain('main..head');
   });
@@ -425,7 +423,7 @@ describe('getCommitRange', () => {
         }
         options.listeners.stdout(Buffer.from(''));
         return Promise.resolve(0);
-      }
+      },
     );
 
     await getCommitRange('base', 'head', {
@@ -435,7 +433,7 @@ describe('getCommitRange', () => {
     });
 
     const logCall = execMock.mock.calls.find(
-      (call) => call[1][0] === 'log'
+      (call) => call[1][0] === 'log',
     ) as any[];
     expect(logCall[1]).toContain('head');
     expect(logCall[1]).not.toContain('main..head');
@@ -484,7 +482,7 @@ describe('createTag', () => {
     await createTag('v1.0.0', true, false, 'sha', true, 'Release notes');
 
     expect(createTagMock).toHaveBeenCalledWith(
-      expect.objectContaining({ tag: 'v1.0.0', message: 'Release notes' })
+      expect.objectContaining({ tag: 'v1.0.0', message: 'Release notes' }),
     );
   });
 
@@ -492,7 +490,7 @@ describe('createTag', () => {
     await createTag('v1.0.0', true, false, 'sha', true, '');
 
     expect(createTagMock).toHaveBeenCalledWith(
-      expect.objectContaining({ tag: 'v1.0.0', message: 'v1.0.0' })
+      expect.objectContaining({ tag: 'v1.0.0', message: 'v1.0.0' }),
     );
   });
 
@@ -501,7 +499,7 @@ describe('createTag', () => {
 
     expect(createTagMock).not.toHaveBeenCalled();
     expect(createRefMock).toHaveBeenCalledWith(
-      expect.objectContaining({ sha: 'sha' })
+      expect.objectContaining({ sha: 'sha' }),
     );
   });
 });

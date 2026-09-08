@@ -236,7 +236,7 @@ describe('utils', () => {
         node_id: 'string',
       },
     ];
-    
+
     getInputMock.mockImplementation((name) => {
       if (name === 'tag_search_pattern') {
         return 'v1.*';
@@ -255,7 +255,7 @@ describe('utils', () => {
     expect(validTags).toHaveLength(2);
     expect(validTags[0].name).toEqual('v1.3.0'); // Tags should be sorted, with v1.3.0 before v1.2.3
     expect(validTags[1].name).toEqual('v1.2.3');
-    expect(validTags.find(tag => tag.name === 'v2.0.1')).toBeUndefined();
+    expect(validTags.find((tag) => tag.name === 'v2.0.1')).toBeUndefined();
 
     // Clean up
     getInputMock.mockReturnValue('');
@@ -311,7 +311,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         tags,
         'headsha',
-        regex
+        regex,
       );
 
       expect(result).toEqual([tags[1]]);
@@ -328,7 +328,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         tags,
         'headsha',
-        regex
+        regex,
       );
 
       expect(listMergedTagsMock).not.toHaveBeenCalled();
@@ -344,7 +344,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         tags,
         'headsha',
-        regex
+        regex,
       );
 
       expect(getCompareStatusMock).toHaveBeenCalledWith('sha1', 'headsha');
@@ -360,7 +360,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         tags,
         'headsha',
-        regex
+        regex,
       );
 
       expect(result).toEqual([tags[0]]);
@@ -380,7 +380,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         tags,
         'headsha',
-        regex
+        regex,
       );
 
       expect(result).toEqual([tags[0], tags[1]]);
@@ -397,7 +397,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         tags,
         'headsha',
-        regex
+        regex,
       );
 
       expect(result).toEqual([tags[1]]);
@@ -405,7 +405,7 @@ describe('utils', () => {
 
     it('caps the API scan at 50 calls', async () => {
       const tags = Array.from({ length: 60 }, (_, i) =>
-        makeTag(`v0.0.${60 - i}`, `sha${60 - i}`)
+        makeTag(`v0.0.${60 - i}`, `sha${60 - i}`),
       );
       isShallowRepositoryMock.mockResolvedValue(true);
       getCompareStatusMock.mockResolvedValue('behind');
@@ -419,7 +419,7 @@ describe('utils', () => {
       const result = await utils.filterTagsByBranchAncestry(
         [],
         'headsha',
-        regex
+        regex,
       );
 
       expect(result).toEqual([]);
