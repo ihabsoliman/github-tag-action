@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Bump version and push tag
         id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
+        uses: ihabsoliman/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Create a GitHub release
@@ -128,5 +128,7 @@ The default graphite width of 10mm is always used for performance reasons.
 If no commit message contains any information, then **default_bump** will be used.
 
 ## Credits
+
+This is a fork of [mathieudutour/github-tag-action](https://github.com/mathieudutour/github-tag-action), snapshotted after upstream became unmaintained, with a set of open community pull requests cherry-picked in.
 
 [anothrNick/github-tag-action](https://github.com/anothrNick/github-tag-action) - a similar action using a Dockerfile (hence not working on macOS)
