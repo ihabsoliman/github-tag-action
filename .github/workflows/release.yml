@@ -1,42 +1,31 @@
 name: Release
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   release:
-    if: github.actor == github.repository_owner
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/') &&
+      github.actor == github.repository_owner
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: package.json
-      - run: npm ci
-      - run: npm run build
-      - name: Compute next version
+      - name: Tag and push
         id: tag_version
         uses: ./
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          dry_run: "true"
-      - run: npm pkg set version="${{ steps.tag_version.outputs.new_version }}"
-      - name: Commit build output
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f lib package.json
-          git commit -m "chore(release): ${{ steps.tag_version.outputs.new_tag }}"
-      - name: Tag and push
-        run: |
-          git tag ${{ steps.tag_version.outputs.new_tag }}
-          git push origin ${{ steps.tag_version.outputs.new_tag }}
       - name: Create a GitHub release
+        if: steps.tag_version.outputs.tag_created == 'true'
         uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
