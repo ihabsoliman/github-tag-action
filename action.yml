@@ -1,4 +1,4 @@
-name: "Auto Tag & Release"
+name: "Github Taggin Action"
 description: "Bump and push git tag on merge"
 author: "Ihab Soliman"
 outputs:
