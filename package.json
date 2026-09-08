@@ -1,0 +1,48 @@
+{
+  "name": "github-tag-action",
+  "version": "6.2.0",
+  "private": true,
+  "description": "A GitHub Action to automatically bump and tag master, on merge, with the latest SemVer formatted version.",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --testTimeout 10000",
+    "check": "prettier --check ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mathieudutour/github-tag-action.git"
+  },
+  "keywords": [
+    "actions",
+    "node",
+    "setup"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Mathieu Dutour",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.0",
+    "@actions/exec": "^1.1.0",
+    "@actions/github": "^4.0.0",
+    "@semantic-release/commit-analyzer": "^8.0.1",
+    "@semantic-release/release-notes-generator": "^9.0.1",
+    "conventional-changelog-conventionalcommits": "^4.6.1",
+    "semver": "^7.3.5"
+  },
+  "devDependencies": {
+    "@octokit/rest": "^18.12.0",
+    "@types/jest": "^27.0.2",
+    "@types/js-yaml": "^4.0.4",
+    "@types/node": "^20.11.16",
+    "@types/semver": "^7.3.9",
+    "jest": "^27.3.1",
+    "jest-circus": "^27.3.1",
+    "js-yaml": "^4.1.0",
+    "prettier": "2.4.1",
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.4.4"
+  }
+}
