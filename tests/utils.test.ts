@@ -1,16 +1,28 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
-const getInputMock = jest.fn().mockReturnValue('');
-const warningMock = jest.fn();
-const getCommitRangeMock = jest.fn();
-const getCompareStatusMock = jest.fn();
-const isShallowRepositoryMock = jest.fn();
-const listMergedTagsMock = jest.fn();
+/*
+ * `jest.fn()` with no type argument is typed `Mock<UnknownFunction>`, whose
+ * parameter and resolved types collapse to `never` - which makes
+ * `mockResolvedValue(...)`, `mockRejectedValue(...)` and
+ * `mockImplementation(...)` reject every argument. These mocks stand in for
+ * module and API shapes we deliberately do not model exactly (the fixtures are
+ * partial on purpose), so give them a permissive signature instead of widening
+ * every fixture to a full API type.
+ */
+type LooseFn = (...args: any[]) => any;
+const mockFn = () => jest.fn<LooseFn>();
+
+const getInputMock = mockFn().mockReturnValue('');
+const warningMock = mockFn();
+const getCommitRangeMock = mockFn();
+const getCompareStatusMock = mockFn();
+const isShallowRepositoryMock = mockFn();
+const listMergedTagsMock = mockFn();
 
 jest.unstable_mockModule('@actions/core', () => ({
-  debug: jest.fn(),
+  debug: mockFn(),
   warning: warningMock,
-  info: jest.fn(),
+  info: mockFn(),
   getInput: getInputMock,
 }));
 

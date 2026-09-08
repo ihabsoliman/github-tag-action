@@ -14,12 +14,24 @@ import {
   setInput,
   setInputs,
   setRepository,
-} from './helper.test';
+} from './helper.test.js';
 
 const realUtils: any = await import('../src/utils.js?real');
-const getCommitsMock = jest.fn();
-const getValidTagsMock = jest.fn();
-const filterTagsByBranchAncestryMock = jest.fn();
+/*
+ * `jest.fn()` with no type argument is typed `Mock<UnknownFunction>`, whose
+ * parameter and resolved types collapse to `never` - which makes
+ * `mockResolvedValue(...)`, `mockRejectedValue(...)` and
+ * `mockImplementation(...)` reject every argument. These mocks stand in for
+ * module and API shapes we deliberately do not model exactly (the fixtures are
+ * partial on purpose), so give them a permissive signature instead of widening
+ * every fixture to a full API type.
+ */
+type LooseFn = (...args: any[]) => any;
+const mockFn = () => jest.fn<LooseFn>();
+
+const getCommitsMock = mockFn();
+const getValidTagsMock = mockFn();
+const filterTagsByBranchAncestryMock = mockFn();
 
 jest.unstable_mockModule('../src/utils.js', () => ({
   ...realUtils,
@@ -29,8 +41,8 @@ jest.unstable_mockModule('../src/utils.js', () => ({
 }));
 
 const realGithub: any = await import('../src/github.js?real');
-const listTagsMock = jest.fn();
-const mockCreateTag = jest.fn().mockResolvedValue(undefined);
+const listTagsMock = mockFn();
+const mockCreateTag = mockFn().mockResolvedValue(undefined);
 
 jest.unstable_mockModule('../src/github.js', () => ({
   // Spread the real module so non-mocked exports (constants such as
@@ -41,14 +53,14 @@ jest.unstable_mockModule('../src/github.js', () => ({
 }));
 
 const realCore: any = await import('@actions/core?real');
-const mockSetOutput = jest.fn();
-const mockSetFailed = jest.fn();
-const mockWarning = jest.fn();
+const mockSetOutput = mockFn();
+const mockSetFailed = mockFn();
+const mockWarning = mockFn();
 
 jest.unstable_mockModule('@actions/core', () => ({
   ...realCore,
-  debug: jest.fn(),
-  info: jest.fn(),
+  debug: mockFn(),
+  info: mockFn(),
   warning: mockWarning,
   setOutput: mockSetOutput,
   setFailed: mockSetFailed,
