@@ -1,9 +1,18 @@
 import * as core from '@actions/core';
 import { prerelease, rcompare, valid } from 'semver';
-import { compareCommits, Tags } from './github.js';
+import {
+  CommitRangeOptions,
+  getCommitRange,
+  getCompareStatus,
+  isShallowRepository,
+  listMergedTags,
+  Tags,
+} from './github.js';
 import { defaultChangelogRules } from './defaults.js';
 import { context } from '@actions/github';
 import { minimatch } from 'minimatch';
+
+const ANCESTRY_API_SCAN_LIMIT = 50;
 
 // Release types supported by semver/npm, matching
 // @semantic-release/commit-analyzer's own default-release-types constant
@@ -66,10 +75,11 @@ interface FinalCommit {
 
 export async function getCommits(
   baseRef: string,
-  headRef: string
+  headRef: string,
+  options: CommitRangeOptions = {}
 ): Promise<{ message: string; hash: string | null }[]> {
   let commits: Array<FinalCommit>;
-  commits = await compareCommits(baseRef, headRef);
+  commits = await getCommitRange(baseRef, headRef, options);
   core.info('We found ' + commits.length + ' commits using classic compare!');
   if (commits.length < 1) {
     core.info(
@@ -122,7 +132,8 @@ export function isPr(ref: string) {
 export function getLatestTag(
   tags: Tags,
   prefixRegex: RegExp,
-  tagPrefix: string
+  tagPrefix: string,
+  initialVersion: string = '0.0.0'
 ) {
   return (
     tags.find(
@@ -130,7 +141,7 @@ export function getLatestTag(
         prefixRegex.test(tag.name) &&
         !prerelease(tag.name.replace(prefixRegex, ''))
     ) || {
-      name: `${tagPrefix}0.0.0`,
+      name: `${tagPrefix}${initialVersion}`,
       commit: {
         sha: 'HEAD',
       },
@@ -146,6 +157,95 @@ export function getLatestPrereleaseTag(
   return tags
     .filter((tag) => prerelease(tag.name.replace(prefixRegex, '')))
     .find((tag) => tag.name.replace(prefixRegex, '').match(identifier));
+}
+
+/**
+ * Restrict `tags` (already prefix-filtered/sorted newest-first, as returned
+ * by `getValidTags`) to those that are ancestors of `sha`, for
+ * `tag_context: branch`.
+ *
+ * Local-git-first: a shallow clone can't be trusted to answer ancestry
+ * questions, so it's skipped entirely in that case. `git tag --list
+ * --merged <sha>` answers the whole question in one call; an empty result
+ * while `tags` is non-empty is treated as "tags were never fetched
+ * locally" rather than "no ancestors", and falls back to the API.
+ *
+ * The API fallback scans `tags` newest-first, calling `getCompareStatus`
+ * per tag (capped at `ANCESTRY_API_SCAN_LIMIT` calls) and stops at the
+ * first non-prerelease ancestor found: anything older can never be
+ * selected once a newer release ancestor exists, since callers pick
+ * `max(latestTag, latestPrereleaseTag)`. Newer prerelease ancestors
+ * encountered before that point are still collected.
+ */
+export async function filterTagsByBranchAncestry(
+  tags: Tags,
+  sha: string,
+  prefixRegex: RegExp,
+  options: { gitCwd?: string } = {}
+): Promise<Tags> {
+  if (tags.length === 0) {
+    return tags;
+  }
+
+  if (!(await isShallowRepository(options.gitCwd))) {
+    try {
+      const mergedTagNames = await listMergedTags(sha, options.gitCwd);
+      if (mergedTagNames.length > 0) {
+        core.info(
+          'tag_context: branch - using local git ancestry (git tag --list --merged).'
+        );
+        const mergedTagNameSet = new Set(mergedTagNames);
+        return tags.filter((tag) => mergedTagNameSet.has(tag.name));
+      }
+      core.info(
+        'tag_context: branch - local git reported no merged tags; falling back to the API scan (tags may never have been fetched locally).'
+      );
+    } catch (error: any) {
+      core.warning(
+        `tag_context: branch - local git ancestry check failed: ${error?.message}. Falling back to the API scan.`
+      );
+    }
+  } else {
+    core.info(
+      'tag_context: branch - checkout is shallow; using the API scan instead of local git.'
+    );
+  }
+
+  core.info('tag_context: branch - scanning tags via the compare API.');
+  const ancestorTags: Tags[number][] = [];
+  let scans = 0;
+  for (const tag of tags) {
+    if (scans >= ANCESTRY_API_SCAN_LIMIT) {
+      core.warning(
+        `tag_context: branch - reached the API scan limit (${ANCESTRY_API_SCAN_LIMIT}); remaining tags were not checked.`
+      );
+      break;
+    }
+    scans++;
+
+    let status: Awaited<ReturnType<typeof getCompareStatus>>;
+    try {
+      status = await getCompareStatus(tag.commit.sha, sha);
+    } catch (error: any) {
+      core.warning(
+        `tag_context: branch - ancestry check failed for tag ${tag.name}: ${error?.message}. Skipping.`
+      );
+      continue;
+    }
+
+    const isAncestor = status === 'ahead' || status === 'identical';
+    if (!isAncestor) {
+      continue;
+    }
+
+    ancestorTags.push(tag);
+
+    if (!prerelease(tag.name.replace(prefixRegex, ''))) {
+      break;
+    }
+  }
+
+  return ancestorTags;
 }
 
 export function mapCustomReleaseRules(customReleaseTypes: string) {

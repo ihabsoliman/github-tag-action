@@ -4,6 +4,7 @@ import { gte, inc, parse, ReleaseType, SemVer, valid } from 'semver';
 import { analyzeCommits } from '@semantic-release/commit-analyzer';
 import { generateNotes } from '@semantic-release/release-notes-generator';
 import {
+  filterTagsByBranchAncestry,
   getBranchFromRef,
   isPr,
   getCommits,
@@ -13,8 +14,13 @@ import {
   mapCustomReleaseRules,
   mergeWithDefaultChangelogRules,
 } from './utils.js';
-import { createTag, listTags } from './github.js';
+import { BranchHistory, createTag, listTags } from './github.js';
 import { Await } from './ts.js';
+
+const TAG_CONTEXTS = ['repo', 'branch'] as const;
+type TagContext = (typeof TAG_CONTEXTS)[number];
+
+const BRANCH_HISTORIES: BranchHistory[] = ['compare', 'last', 'full'];
 
 export default async function main() {
   core.setOutput('tag_created', 'false');
@@ -48,6 +54,43 @@ export default async function main() {
   const pushTag = core.getBooleanInput('push_tag');
   const commitAnalyzerPreset = core.getInput('commit_analyzer_preset');
 
+  const gitCwd = core.getInput('source');
+  const tagMessage = core.getInput('tag_message');
+
+  if (tagMessage && !createAnnotatedTag) {
+    core.warning(
+      'tag_message was set but create_annotated_tag is false; tag_message is ignored for lightweight tags.'
+    );
+  }
+
+  const initialVersionInput = core.getInput('initial_version') || '0.0.0';
+  const initialVersion = valid(initialVersionInput.replace(/^v/, ''));
+  if (!initialVersion) {
+    throw new Error(`${initialVersionInput} is not a valid semver.`);
+  }
+
+  const tagContextInput = core.getInput('tag_context') || 'repo';
+  let tagContext: TagContext = 'repo';
+  if ((TAG_CONTEXTS as readonly string[]).includes(tagContextInput)) {
+    tagContext = tagContextInput as TagContext;
+  } else {
+    core.warning(
+      `${tagContextInput} is not a valid tag_context. Falling back to repo.`
+    );
+  }
+
+  const branchHistoryInput = core.getInput('branch_history') || 'compare';
+  let branchHistory: BranchHistory = 'compare';
+  if (BRANCH_HISTORIES.includes(branchHistoryInput as BranchHistory)) {
+    branchHistory = branchHistoryInput as BranchHistory;
+  } else {
+    core.warning(
+      `${branchHistoryInput} is not a valid branch_history. Falling back to compare.`
+    );
+  }
+
+  const defaultBranch = core.getInput('default_branch');
+
   let mappedReleaseRules;
   if (customReleaseRules) {
     mappedReleaseRules = mapCustomReleaseRules(customReleaseRules);
@@ -74,6 +117,13 @@ export default async function main() {
   const isPullRequest = isPr(GITHUB_REF);
   const isPrerelease = !isReleaseBranch && !isPullRequest && isPreReleaseBranch;
 
+  const commitRangeOptions = {
+    gitCwd,
+    branchHistory,
+    defaultBranch,
+    currentBranch,
+  };
+
   // Sanitize identifier according to
   // https://semver.org/#backusnaur-form-grammar-for-valid-semver-versions
   const identifier = (
@@ -83,8 +133,19 @@ export default async function main() {
   const prefixRegex = new RegExp(`^${tagPrefix}`);
 
   const tags = await listTags(/true/i.test(shouldFetchAllTags));
-  const validTags = await getValidTags(tags, prefixRegex);
-  const latestTag = getLatestTag(validTags, prefixRegex, tagPrefix);
+  const allValidTags = await getValidTags(tags, prefixRegex);
+  const validTags =
+    tagContext === 'branch'
+      ? await filterTagsByBranchAncestry(allValidTags, commitRef, prefixRegex, {
+          gitCwd,
+        })
+      : allValidTags;
+  const latestTag = getLatestTag(
+    validTags,
+    prefixRegex,
+    tagPrefix,
+    initialVersion
+  );
   const latestPrereleaseTag = getLatestPrereleaseTag(
     validTags,
     identifier,
@@ -96,7 +157,11 @@ export default async function main() {
   let newVersion: string;
 
   if (customTag) {
-    commits = await getCommits(latestTag.commit.sha, commitRef);
+    commits = await getCommits(
+      latestTag.commit.sha,
+      commitRef,
+      commitRangeOptions
+    );
 
     core.setOutput('release_type', 'custom');
     newVersion = customTag;
@@ -131,7 +196,11 @@ export default async function main() {
     core.setOutput('previous_tag', previousTag.name);
     const previousWasPrerelease = previousVersion.prerelease.length != 0;
 
-    commits = await getCommits(previousTag.commit.sha, commitRef);
+    commits = await getCommits(
+      previousTag.commit.sha,
+      commitRef,
+      commitRangeOptions
+    );
     core.debug('We found ' + commits.length + ' commits to consider!');
 
     if (scopes.length) {
@@ -270,6 +339,13 @@ export default async function main() {
     return;
   }
 
-  await createTag(newTag, createAnnotatedTag, tagExists, commitRef, pushTag);
+  await createTag(
+    newTag,
+    createAnnotatedTag,
+    tagExists,
+    commitRef,
+    pushTag,
+    tagMessage
+  );
   core.setOutput('tag_created', 'true');
 }

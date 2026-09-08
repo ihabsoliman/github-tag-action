@@ -32,6 +32,7 @@ jobs:
 
 - **github_token** _(required)_ - Required for permission to tag the repo. Usually `${{ secrets.GITHUB_TOKEN }}`.
 - **commit_sha** _(optional)_ - The commit SHA value to add the tag. If specified, it uses this value instead GITHUB_SHA. It could be useful when a previous step merged a branch into github.ref.
+- **source** _(optional)_ - Path to the local git checkout used for local-git operations (the `git log` fallback of the compare API, the shallow-clone probe, and `tag_context: branch` ancestry checks). GitHub API calls are repository-global and unaffected (default: `.`).
 
 #### Fetch all tags
 
@@ -45,6 +46,13 @@ jobs:
 #### Filter commits
 
 - **scopes** _(optional)_ - Comma separated list of scopes (JavaScript regular expression accepted) to consider when tagging, and to include in the changelog. If this option is specified, then commits with scopes not matching this list will not be analyzed nor included in the changelog.
+- **branch_history** _(optional)_ - Which commits feed the commit analyzer and the changelog (default: `compare`).
+  - `compare` - commits between the previous tag and the tagged commit (existing behaviour).
+  - `last` - only the tagged commit itself (useful for squash-merge workflows).
+  - `full` - every commit reachable from the tagged commit, narrowed to `default_branch..<commit>` when `default_branch` is set and differs from the current branch. Requires a full clone (`fetch-depth: 0`); falls back to `compare` with a warning on a shallow checkout.
+
+  Unrecognized values fall back to `compare` with a warning.
+- **default_branch** _(optional)_ - The repository's default branch (e.g. `main`). Only used by `branch_history: full`, to narrow the range to the commits unique to the current branch. Not auto-detected.
 
 #### Customize the tag
 
@@ -56,8 +64,15 @@ jobs:
 - **custom_tag** _(optional)_ - Custom tag name. If specified, it overrides bump settings.
 - **force_update** _(optional)_ - Updates the sha of a tag if it already exists (default: `false`).
 - **create_annotated_tag** _(optional)_ - Boolean to create an annotated rather than a lightweight one (default: `false`).
+- **tag_message** _(optional)_ - Message for the annotated tag object (default: the tag name). Only used when `create_annotated_tag` is `true`; setting it with `create_annotated_tag: false` logs a warning and is otherwise ignored.
 - **tag_prefix** _(optional)_ - A prefix to the tag name (default: `v`).
+- **initial_version** _(optional)_ - The version to assume as the previous version when no matching tag exists yet, i.e. the base for the very first tag this action creates (default: `0.0.0`). Must be a valid semver; a leading `v` is stripped. The action fails if it is not valid semver.
 - **tag_search_pattern** _(optional)_ - A glob pattern to filter tags to consider for version bumping (e.g. `v0.*`). Useful for projects with multiple major versions supported simultaneously with different root commits.
+- **tag_context** _(optional)_ - Which tags to consider when picking the previous tag (default: `repo`).
+  - `repo` - considers every tag in the repository.
+  - `branch` - considers only tags that are ancestors of the tagged commit.
+
+  Unrecognized values fall back to `repo` with a warning.
 - **append_to_pre_release_tag** _(optional)_ - A suffix to the pre-release tag name (default: `<branch>`).
 - **commit_analyzer_preset** _(optional)_ - A supported `conventional-changelog` preset (default: `angular`). See ![list of supported values](https://github.com/semantic-release/commit-analyzer#options)
 

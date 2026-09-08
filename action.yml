@@ -43,9 +43,17 @@ inputs:
     description: "A prefix to the tag name (default: `v`)."
     required: false
     default: "v"
+  initial_version:
+    description: "The version to assume as the previous version when no matching tag exists yet, i.e. the base for the very first tag this action creates (default: `0.0.0`). Must be a valid semver; a leading `v` is stripped. The action fails if it is not valid semver."
+    required: false
+    default: "0.0.0"
   tag_search_pattern:
     description: "A glob pattern to filter tags to consider for version bumping (e.g. `v0.*`). Useful for projects with multiple major versions supported simultaneously."
     required: false
+  tag_context:
+    description: "Which tags to consider when picking the previous tag: `repo` (default) considers every tag in the repository; `branch` considers only tags that are ancestors of the tagged commit. Unrecognized values fall back to `repo` with a warning."
+    required: false
+    default: "repo"
   append_to_pre_release_tag:
     description: "A suffix to a pre-release tag name (default: `<branch>`)."
     required: false
@@ -69,13 +77,32 @@ inputs:
   scopes:
     description: "Comma separated list of scopes (bash reg exp accepted) to analyze and to include in the changelog."
     required: false
+  branch_history:
+    description: |
+      Which commits feed the commit analyzer and the changelog.
+      `compare` (default) - commits between the previous tag and the tagged commit (existing behaviour).
+      `last` - only the tagged commit itself (useful for squash-merge workflows).
+      `full` - every commit reachable from the tagged commit, narrowed to `default_branch..<commit>` when `default_branch` is set and differs from the current branch. Requires a full clone (`fetch-depth: 0`); falls back to `compare` with a warning on a shallow checkout.
+      Unrecognized values fall back to `compare` with a warning.
+    required: false
+    default: "compare"
+  default_branch:
+    description: "The repository's default branch (e.g. `main`). Only used by `branch_history: full`, to narrow the range to the commits unique to the current branch. Not auto-detected."
+    required: false
   commit_sha:
     description: "The commit SHA value to add the tag. If specified, it uses this value instead GITHUB_SHA. It could be useful when a previous step merged a branch into github.ref."
     required: false
+  source:
+    description: "Path to the local git checkout used for the local-git operations (the `git log` fallback of the compare API, the shallow-clone probe, and `tag_context: branch` ancestry checks). GitHub API calls are repository-global and unaffected (default: `.`)."
+    required: false
+    default: "."
   create_annotated_tag:
     description: "Boolean to create an annotated tag rather than lightweight."
     required: false
     default: "false"
+  tag_message:
+    description: "Message for the annotated tag object (default: the tag name). Only used when `create_annotated_tag` is `true`; setting it with `create_annotated_tag: false` logs a warning and is otherwise ignored."
+    required: false
   fetch_all_tags:
     description: "Boolean to fetch all tags for a repo (if false, only the last 100 will be fetched)."
     required: false

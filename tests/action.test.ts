@@ -11,11 +11,13 @@ import {
 const realUtils: any = await import('../src/utils.js?real');
 const getCommitsMock = jest.fn();
 const getValidTagsMock = jest.fn();
+const filterTagsByBranchAncestryMock = jest.fn();
 
 jest.unstable_mockModule('../src/utils.js', () => ({
   ...realUtils,
   getCommits: getCommitsMock,
   getValidTags: getValidTagsMock,
+  filterTagsByBranchAncestry: filterTagsByBranchAncestryMock,
 }));
 
 const listTagsMock = jest.fn();
@@ -29,12 +31,13 @@ jest.unstable_mockModule('../src/github.js', () => ({
 const realCore: any = await import('@actions/core?real');
 const mockSetOutput = jest.fn();
 const mockSetFailed = jest.fn();
+const mockWarning = jest.fn();
 
 jest.unstable_mockModule('@actions/core', () => ({
   ...realCore,
   debug: jest.fn(),
   info: jest.fn(),
-  warning: jest.fn(),
+  warning: mockWarning,
   setOutput: mockSetOutput,
   setFailed: mockSetFailed,
 }));
@@ -58,6 +61,9 @@ describe('github-tag-action', () => {
     // that only mock listTagsMock (not getValidTagsMock) exercise the real
     // filtering logic instead of an implementation left over from another test.
     getValidTagsMock.mockImplementation(realUtils.getValidTags);
+    filterTagsByBranchAncestryMock.mockImplementation(
+      async (tags: unknown) => tags
+    );
     setBranch('master');
     setCommitSha('79e0ea271c26aa152beef77c3275ff7b8f8d8274');
     clearInputs();
@@ -118,7 +124,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -147,7 +154,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -243,7 +251,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -284,7 +293,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -330,7 +340,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         true,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -358,7 +369,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        false
+        false,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -399,7 +411,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -445,7 +458,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -484,7 +498,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -524,7 +539,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -567,7 +583,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -610,7 +627,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -653,7 +671,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -706,7 +725,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -750,7 +770,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -832,7 +853,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -871,7 +893,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -913,7 +936,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -962,7 +986,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1011,7 +1036,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1055,7 +1081,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1099,7 +1126,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1137,7 +1165,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1177,7 +1206,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1221,7 +1251,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1278,7 +1309,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1323,7 +1355,8 @@ describe('github-tag-action', () => {
         expect.any(Boolean),
         false,
         expect.any(String),
-        true
+        true,
+        ''
       );
       expect(mockSetFailed).not.toHaveBeenCalled();
     });
@@ -1441,6 +1474,273 @@ describe('github-tag-action', () => {
       expect(mockSetOutput).toHaveBeenCalledWith('new_version', '2.0.0');
       expect(mockCreateTag).not.toHaveBeenCalled();
       expect(mockSetFailed).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tag_message', () => {
+    beforeEach(() => {
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: this is my first fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => []);
+    });
+
+    it('passes tag_message through to createTag', async () => {
+      setInput('tag_message', 'Release notes');
+      setInput('create_annotated_tag', 'true');
+
+      await action();
+
+      expect(mockCreateTag).toHaveBeenCalledWith(
+        'v0.0.1',
+        true,
+        false,
+        expect.any(String),
+        true,
+        'Release notes'
+      );
+    });
+
+    it('passes an empty string when tag_message is not set', async () => {
+      await action();
+
+      expect(mockCreateTag).toHaveBeenCalledWith(
+        'v0.0.1',
+        expect.any(Boolean),
+        false,
+        expect.any(String),
+        true,
+        ''
+      );
+    });
+
+    it('warns when tag_message is set but create_annotated_tag is false', async () => {
+      setInput('tag_message', 'Release notes');
+      setInput('create_annotated_tag', 'false');
+
+      await action();
+
+      expect(mockWarning).toHaveBeenCalledWith(
+        expect.stringContaining('tag_message')
+      );
+    });
+
+    it('does not warn when tag_message is not set', async () => {
+      setInput('create_annotated_tag', 'false');
+
+      await action();
+
+      expect(mockWarning).not.toHaveBeenCalledWith(
+        expect.stringContaining('tag_message')
+      );
+    });
+  });
+
+  describe('initial_version', () => {
+    it('uses initial_version as the fallback tag when no tag exists', async () => {
+      setInput('initial_version', '1.5.0');
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: this is my first fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => []);
+
+      await action();
+
+      expect(mockSetOutput).toHaveBeenCalledWith('new_version', '1.5.1');
+      expect(mockSetFailed).not.toHaveBeenCalled();
+    });
+
+    it('strips a leading v from initial_version', async () => {
+      setInput('initial_version', 'v1.5.0');
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: this is my first fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => []);
+
+      await action();
+
+      expect(mockSetOutput).toHaveBeenCalledWith('new_version', '1.5.1');
+    });
+
+    it('throws (rather than core.setFailed) on an invalid initial_version', async () => {
+      setInput('initial_version', 'not-a-semver');
+
+      await expect(action()).rejects.toThrow(
+        'not-a-semver is not a valid semver.'
+      );
+      expect(mockSetFailed).not.toHaveBeenCalled();
+    });
+
+    it('defaults to 0.0.0 when initial_version is not set', async () => {
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: this is my first fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => []);
+
+      await action();
+
+      expect(mockSetOutput).toHaveBeenCalledWith('new_version', '0.0.1');
+    });
+  });
+
+  describe('tag_context', () => {
+    const releaseTag = {
+      name: 'v1.0.0',
+      commit: { sha: 'sha-v1', url: 'string' },
+      zipball_url: 'string',
+      tarball_url: 'string',
+      node_id: 'string',
+    };
+
+    beforeEach(() => {
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: a fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => [releaseTag]);
+      getValidTagsMock.mockImplementation(async () => [releaseTag]);
+    });
+
+    it('defaults to repo (unfiltered tags), leaving filterTagsByBranchAncestry unused', async () => {
+      await action();
+
+      expect(filterTagsByBranchAncestryMock).not.toHaveBeenCalled();
+      expect(mockSetOutput).toHaveBeenCalledWith('previous_version', '1.0.0');
+    });
+
+    it('branch mode filters tags via filterTagsByBranchAncestry', async () => {
+      setInput('tag_context', 'branch');
+      setInput('source', '/repo/checkout');
+      filterTagsByBranchAncestryMock.mockResolvedValue([releaseTag]);
+
+      await action();
+
+      expect(filterTagsByBranchAncestryMock).toHaveBeenCalledWith(
+        [releaseTag],
+        expect.any(String),
+        expect.any(RegExp),
+        { gitCwd: '/repo/checkout' }
+      );
+      expect(mockSetOutput).toHaveBeenCalledWith('previous_version', '1.0.0');
+    });
+
+    it('falls back to initial_version when branch mode finds no ancestor tag', async () => {
+      setInput('tag_context', 'branch');
+      setInput('initial_version', '2.0.0');
+      filterTagsByBranchAncestryMock.mockResolvedValue([]);
+
+      await action();
+
+      expect(mockSetOutput).toHaveBeenCalledWith('previous_version', '2.0.0');
+    });
+
+    it('keeps tag existence checks repo-global even in branch mode', async () => {
+      setInput('tag_context', 'branch');
+      filterTagsByBranchAncestryMock.mockResolvedValue([]);
+      setInput('initial_version', '1.0.0');
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: a fix', hash: null },
+      ]);
+
+      await action();
+
+      // The raw (unfiltered) tag list already contains v1.0.0, so the
+      // computed next patch tag v1.0.1 does not already exist and the
+      // action proceeds to create it - this only holds if tagExists
+      // consulted the unfiltered `tags`, not the branch-filtered list.
+      expect(mockCreateTag).toHaveBeenCalled();
+    });
+
+    it('warns and behaves as repo for an unrecognized tag_context value', async () => {
+      setInput('tag_context', 'nonsense');
+
+      await action();
+
+      expect(mockWarning).toHaveBeenCalledWith(
+        expect.stringContaining('tag_context')
+      );
+      expect(filterTagsByBranchAncestryMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('branch_history', () => {
+    beforeEach(() => {
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: a fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => []);
+    });
+
+    it('passes branch_history through the commit range options to getCommits', async () => {
+      setInput('branch_history', 'full');
+      setInput('default_branch', 'main');
+
+      await action();
+
+      expect(getCommitsMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({
+          branchHistory: 'full',
+          defaultBranch: 'main',
+          currentBranch: 'master',
+        })
+      );
+    });
+
+    it('defaults to compare', async () => {
+      await action();
+
+      expect(getCommitsMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({ branchHistory: 'compare' })
+      );
+    });
+
+    it('warns and behaves as compare for an unrecognized branch_history value', async () => {
+      setInput('branch_history', 'nonsense');
+
+      await action();
+
+      expect(mockWarning).toHaveBeenCalledWith(
+        expect.stringContaining('branch_history')
+      );
+      expect(getCommitsMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({ branchHistory: 'compare' })
+      );
+    });
+  });
+
+  describe('source', () => {
+    beforeEach(() => {
+      getCommitsMock.mockImplementation(async () => [
+        { message: 'fix: a fix', hash: null },
+      ]);
+      listTagsMock.mockImplementation(async () => []);
+    });
+
+    it('resolves gitCwd from the source input and forwards it to getCommits', async () => {
+      setInput('source', '/some/checkout');
+
+      await action();
+
+      expect(getCommitsMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({ gitCwd: '/some/checkout' })
+      );
+    });
+
+    it('defaults gitCwd to "." when source is not set', async () => {
+      await action();
+
+      expect(getCommitsMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        expect.objectContaining({ gitCwd: '.' })
+      );
     });
   });
 });
