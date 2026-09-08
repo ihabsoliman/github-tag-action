@@ -126,7 +126,7 @@ inputs:
 
 runs:
   using: "node24"
-  main: "lib/main.js"
+  main: "lib/main.cjs"
 branding:
   icon: "git-merge"
   color: "purple"
