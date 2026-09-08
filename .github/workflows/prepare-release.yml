@@ -1,0 +1,38 @@
+name: Prepare release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Compute next version
+        id: tag_version
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: "true"
+      - run: npm pkg set version="${{ steps.tag_version.outputs.new_version }}"
+      - name: Open release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG: ${{ steps.tag_version.outputs.new_tag }}
+          CHANGELOG: ${{ steps.tag_version.outputs.changelog }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "release/${NEW_TAG}"
+          git commit -am "chore(release): ${NEW_TAG}"
+          git push origin "release/${NEW_TAG}"
+          gh pr create \
+            --title "chore(release): ${NEW_TAG}" \
+            --body "${CHANGELOG}"
