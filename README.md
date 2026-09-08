@@ -159,6 +159,44 @@ The default graphite width of 10mm is always used for performance reasons.
 
 If no commit message contains any information, then **default_bump** will be used.
 
+## Releasing
+
+`main` is protected by a repo ruleset (required review, signed commits, linear history) that
+blocks direct pushes, so cutting a release is a two-step, PR-based process rather than a single
+click:
+
+1. **Prepare** — run the [`Prepare release`](.github/workflows/prepare-release.yml) workflow
+   (`gh workflow run prepare-release.yml`, or via the Actions tab). It does a `dry_run` of this
+   action against `main`'s current HEAD to compute the next version from the conventional commits
+   since the last tag, bumps `package.json`'s `version` accordingly, and opens a
+   `chore(release): vX.Y.Z` pull request with the changelog as its description. `package.json`'s
+   version is cosmetic only (the package is `private: true` and never published to npm) — it
+   exists so the release PR has something to review and merge.
+2. **Review and merge** — review the PR like any other and merge it (squash or rebase, per the
+   ruleset). Merging is the point of no return: it's what actually cuts the release.
+3. **Release** — merging fires [`Release`](.github/workflows/release.yml) automatically. It runs
+   this action for real (not a dry run) against the merge commit, which computes the same version
+   again and creates + pushes the `vX.Y.Z` tag directly on `main`'s new HEAD — no synthetic or
+   detached commits involved. It then creates a GitHub release from that tag via
+   [`ncipollo/release-action`](https://github.com/ncipollo/release-action), using this action's
+   `changelog` output as the release body.
+4. **Publish** — the new GitHub release (`release: published`) triggers
+   [`Publish Immutable Action Version`](.github/workflows/publish-immutable-actions.yml)
+   automatically, which publishes that tag to GitHub's immutable actions registry.
+
+Every push to `main` and every PR also runs [`Check dist`](.github/workflows/check-dist.yml),
+which rebuilds `lib/` and fails if the committed output doesn't match a fresh build — this is
+what makes it safe for `release.yml` to tag `main`'s HEAD directly without rebuilding first.
+
+### Moving a floating major tag
+
+If you want consumers to be able to pin to a floating major tag (e.g. `uses: owner/repo@v1`) the
+way most GitHub Actions do, run
+[`Update major version tag`](.github/workflows/update-main-version.yml) after cutting a release:
+give it the major tag (`v1`) and the target (`v1.4.2`), and it force-moves `v1` to point at that
+commit. This repo doesn't do this by default — it's a manual, deliberate step, not part of the
+automated release above.
+
 ## Credits
 
 This is a fork of [mathieudutour/github-tag-action](https://github.com/mathieudutour/github-tag-action), snapshotted after upstream became unmaintained, with a set of open community pull requests cherry-picked in.
