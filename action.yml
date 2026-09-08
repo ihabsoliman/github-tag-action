@@ -20,6 +20,33 @@ inputs:
   github_token:
     description: "Required for permission to tag the repo."
     required: true
+  bump_strategy:
+    description: |
+      How to derive the bump from commit messages (default: `conventional-commits`).
+      `conventional-commits` parses commits with a conventional-commit analyzer. `string-token` instead scans commit messages for magic tokens (`#major`/`#minor`/`#patch`/`#none` by default) - useful for teams that don't write conventional commits.
+    required: false
+    default: "conventional-commits"
+  major_string_token:
+    description: "Token that triggers a major bump when `bump_strategy` is `string-token` (default: `#major`)."
+    required: false
+  minor_string_token:
+    description: "Token that triggers a minor bump when `bump_strategy` is `string-token` (default: `#minor`)."
+    required: false
+  patch_string_token:
+    description: "Token that triggers a patch bump when `bump_strategy` is `string-token` (default: `#patch`)."
+    required: false
+  none_string_token:
+    description: "Token that suppresses tagging when `bump_strategy` is `string-token` (default: `#none`). Loses to `major`/`minor`/`patch` tokens if they also appear in the range."
+    required: false
+  token_match_mode:
+    description: |
+      How `string-token` matches tokens (default: `word`).
+      `word` requires the token to be delimited and matches case-insensitively, so `#patches` does not trigger `#patch`. `substring` is a case-sensitive plain substring search, bug-compatible with anothrNick/github-tag-action - under which `#patches` *does* trigger `#patch`.
+    required: false
+    default: "word"
+  pre_release:
+    description: "Force pre-release on (`true`) or off (`false`), overriding `release_branches`/`pre_release_branches` inference. Leave unset to infer from the branch."
+    required: false
   default_bump:
     description: "Which type of bump to use when none explicitly provided when commiting to a release branch (default: `patch`)."
     required: false

@@ -77,15 +77,35 @@ interface FinalCommit {
   };
 }
 
+/** A commit as it appears in a `push` webhook payload. */
+interface PushPayloadCommit {
+  id?: string;
+  message: string;
+}
+
+export type GetCommitsOptions = CommitRangeOptions & {
+  /**
+   * Skip the closed-PR payload fallback when the compare range is empty.
+   *
+   * The `string-token` bump strategy sets this: `entrypoint.sh` has no
+   * equivalent fallback, and using one would diverge from it. Legacy's
+   * `git log <tag_commit>..<HEAD>` on an already-tagged HEAD is simply empty,
+   * which falls through to `default_bump`, whereas the payload fallback would
+   * re-read the pushed commits and could find a token that legacy never saw.
+   */
+  skipClosedPrFallback?: boolean;
+};
+
 export async function getCommits(
   baseRef: string,
   headRef: string,
-  options: CommitRangeOptions = {},
+  options: GetCommitsOptions = {},
 ): Promise<{ message: string; hash: string | null }[]> {
+  const { skipClosedPrFallback, ...rangeOptions } = options;
   let commits: Array<FinalCommit>;
-  commits = await getCommitRange(baseRef, headRef, options);
+  commits = await getCommitRange(baseRef, headRef, rangeOptions);
   core.info('We found ' + commits.length + ' commits using classic compare!');
-  if (commits.length < 1) {
+  if (commits.length < 1 && !skipClosedPrFallback) {
     core.info(
       'We did not find enough commits, attempting to scan closed PR method.',
     );
@@ -115,11 +135,17 @@ function getClosedPRCommits() {
     core.info(
       'We found ' + pr_commit_count + ' commits from the Closed PR method.',
     );
+    // `push` payload commits are `{ id, message, author, ... }` - there is no
+    // nested `.commit`, so they have to be normalised into `FinalCommit` shape
+    // for the mapping below. Reading `commit.commit.message` directly here used
+    // to throw; the bug went unnoticed because the second call was a `.filter`
+    // (whose object literal is always truthy, so the original elements were
+    // passed through untouched) rather than the intended `.map`.
     commits = context.payload.commits
-      .filter((commit: FinalCommit) => !!commit.commit.message)
-      .filter((commit: FinalCommit) => ({
-        message: commit.commit.message,
-        hash: commit.sha,
+      .filter((commit: PushPayloadCommit) => !!commit.message)
+      .map((commit: PushPayloadCommit) => ({
+        sha: commit.id ?? null,
+        commit: { message: commit.message },
       }));
     core.debug(
       'After processing we are going to present ' +

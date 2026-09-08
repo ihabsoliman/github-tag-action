@@ -44,6 +44,7 @@ jobs:
 
 - **release_branches** _(optional)_ - Comma separated list of branches (JavaScript regular expression accepted) that will generate the release tags. Other branches and pull-requests generate versions postfixed with the commit hash and do not generate any repository tag. Examples: `^master$` or `.*` or `^release.*,^hotfix.*,^master$`... (default: `^master$,^main$`).
 - **pre_release_branches** _(optional)_ - Comma separated list of branches (JavaScript regular expression accepted) that will generate the pre-release tags.
+- **pre_release** _(optional)_ - Force pre-release on (`true`) or off (`false`), overriding what `release_branches`/`pre_release_branches` would infer. Leave unset to keep inferring from the branch. Useful when the caller already knows whether a run is a pre-release (e.g. a reusable workflow that decides from its own inputs) and doesn't want to encode that as branch regexes.
 
 #### Filter commits
 
@@ -55,6 +56,19 @@ jobs:
 
   Unrecognized values fall back to `compare` with a warning.
 - **default_branch** _(optional)_ - The repository's default branch (e.g. `main`). Only used by `branch_history: full`, to narrow the range to the commits unique to the current branch. Not auto-detected.
+
+#### Choose a bump strategy
+
+- **bump_strategy** _(optional)_ - How the bump is derived from commit messages (default: `conventional-commits`). See [Bump strategies](#bump-strategies).
+  - `conventional-commits` - parse commits with a conventional-commit analyzer.
+  - `string-token` - scan commit messages for magic tokens such as `#major`.
+- **major_string_token** _(optional)_ - Token that triggers a major bump under `bump_strategy: string-token` (default: `#major`).
+- **minor_string_token** _(optional)_ - Token that triggers a minor bump under `bump_strategy: string-token` (default: `#minor`).
+- **patch_string_token** _(optional)_ - Token that triggers a patch bump under `bump_strategy: string-token` (default: `#patch`).
+- **none_string_token** _(optional)_ - Token that suppresses tagging under `bump_strategy: string-token` (default: `#none`).
+- **token_match_mode** _(optional)_ - How tokens are matched (default: `word`). See [Matching modes](#matching-modes).
+
+Setting any `*_string_token` without also setting `bump_strategy: string-token` logs a warning and has no effect. Setting an empty string for one of them disables that bump level entirely.
 
 #### Customize the tag
 
@@ -104,11 +118,67 @@ jobs:
 - **new_version** - The value of the newly created tag without the prefix. Note that if there hasn't been any new commit, this will be `undefined`.
 - **previous_tag** - The value of the previous tag (or `v0.0.0` if none). Note that if `custom_tag` is set, this will be `undefined`.
 - **previous_version** - The value of the previous tag (or `0.0.0` if none) without the prefix. Note that if `custom_tag` is set, this will be `undefined`.
-- **release_type** - The computed release type (`major`, `minor`, `patch` or `custom` - can be prefixed with `pre`).
+- **release_type** - The computed release type (`major`, `minor`, `patch` or `custom` - can be prefixed with `pre`). Under `bump_strategy: string-token` it is `none` when a `none` token suppressed the bump.
 - **changelog** - The [conventional changelog](https://github.com/conventional-changelog/conventional-changelog) since the previous tag.
 - **tag_created** - Whether a tag was actually created/pushed (`true`/`false`). Other outputs (`new_tag`, `new_version`, etc.) may be populated even when this is `false` (e.g. `dry_run`, or a `soft_fail`'d error) - check this output before acting on them.
 
 > **_Note:_** This action creates a [lightweight tag](https://developer.github.com/v3/git/refs/#create-a-reference) by default.
+
+### Bump strategies
+
+Two strategies are available, selected with `bump_strategy`.
+
+| | `conventional-commits` (default) | `string-token` |
+| --- | --- | --- |
+| How the bump is decided | Commits are parsed as conventional commits and analyzed structurally | Commit messages are scanned for magic substrings |
+| Example commit | `feat(api): add pagination` | `add pagination #minor` |
+| Configured by | `commit_analyzer_preset`, `custom_release_rules`, `scopes` | `major_string_token`, `minor_string_token`, `patch_string_token`, `none_string_token`, `token_match_mode` |
+
+Everything else - prefix-scoped tag discovery, prerelease handling, tag creation - is shared, so the two strategies differ only in how they read intent from commit messages.
+
+Some vocabulary used throughout this README:
+
+- **Bump strategy** - how a commit range is turned into `major`/`minor`/`patch`/nothing.
+- **Prefix-scoped version lineage** - the set of tags sharing one `tag_prefix`. Each prefix has an independent version history, so `gateway_1.4.0` and `web-app_2.9.0` never influence each other's bumps.
+- **Release branch** - a branch matching `release_branches`; it produces plain version tags. Everything else produces prereleases if it matches `pre_release_branches` (or if `pre_release: true` is set).
+- **Prerelease identifier** - the label in `1.4.1-RC.3`, taken from `append_to_pre_release_tag` and defaulting to the branch name.
+
+#### Bumping with string tokens
+
+Set `bump_strategy: string-token` when your team doesn't write conventional commits but does mark intent in commit messages:
+
+```yaml
+- uses: ihabsoliman/github-tag-action@v1
+  with:
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    bump_strategy: string-token
+```
+
+That's the whole configuration - the four tokens default to `#major`, `#minor`, `#patch` and `#none`. Override them for a different house style:
+
+```yaml
+    bump_strategy: string-token
+    major_string_token: "[breaking]"
+    minor_string_token: "[feature]"
+    patch_string_token: "[fix]"
+```
+
+Rules:
+
+- Every commit message in the range is searched, subject and body alike. A token in any commit counts.
+- **Precedence is `major` > `minor` > `patch` > `none`.** A range containing both `#major` and `#none` bumps major - `#none` only wins when no other token appears anywhere in the range.
+- When no token matches, `default_bump` applies (set `default_bump: false` to tag nothing instead).
+- When the `none` token matches, no tag is created and `new_tag`/`new_version` echo the existing tag rather than being empty, so a workflow using them as an image tag always has a value.
+- `scopes` is not supported with this strategy (it filters to conventional commits, which would discard the very commits being scanned) and is ignored with a warning.
+
+##### Matching modes
+
+`token_match_mode` controls how strictly tokens are matched:
+
+- **`word`** (default) - the token must be delimited by non-word characters or a string boundary, and matching is case-insensitive. `#patches` does **not** trigger `#patch`; `#MAJOR` does trigger `#major`.
+- **`substring`** - a case-sensitive plain substring search. This is bug-compatible with [anothrNick/github-tag-action](https://github.com/anothrNick/github-tag-action), whose bash implementation used a glob: under this mode `#patches` **does** trigger `#patch`, and `#MAJOR` does **not** match `#major`. Use it when migrating from that action and you need identical results.
+
+> **_Note:_** the `substring` sharp edge is real - a commit body mentioning "fixed #patches in the docs" will cut a patch release. Prefer distinctive tokens (`[fix]`, `#bump-patch`) if you must use `substring`.
 
 ### Bumping
 

@@ -15,13 +15,34 @@ import {
   mapCustomReleaseRules,
   mergeWithDefaultChangelogRules,
 } from './utils.js';
-import { BranchHistory, createTag, listTags } from './github.js';
+import {
+  BranchHistory,
+  createTag,
+  listTags,
+  NO_PREVIOUS_TAG_SHA,
+} from './github.js';
+import {
+  analyzeCommitsByStringToken,
+  StringTokenResult,
+  TOKEN_MATCH_MODES,
+  TokenMatchMode,
+} from './string-token.js';
 import { Await } from './ts.js';
 
 const TAG_CONTEXTS = ['repo', 'branch'] as const;
 type TagContext = (typeof TAG_CONTEXTS)[number];
 
 const BRANCH_HISTORIES: BranchHistory[] = ['compare', 'last', 'full'];
+
+const BUMP_STRATEGIES = ['conventional-commits', 'string-token'] as const;
+type BumpStrategy = (typeof BUMP_STRATEGIES)[number];
+
+const DEFAULT_STRING_TOKENS = {
+  major: '#major',
+  minor: '#minor',
+  patch: '#patch',
+  none: '#none',
+} as const;
 
 export default async function main() {
   core.setOutput('tag_created', 'false');
@@ -54,6 +75,49 @@ export default async function main() {
 
   const gitCwd = core.getInput('source');
   const tagMessage = core.getInput('tag_message');
+
+  const bumpStrategyInput =
+    core.getInput('bump_strategy') || 'conventional-commits';
+  if (!(BUMP_STRATEGIES as readonly string[]).includes(bumpStrategyInput)) {
+    throw new Error(
+      `${bumpStrategyInput} is not a valid bump_strategy. Expected one of ${BUMP_STRATEGIES.join(', ')}.`,
+    );
+  }
+  const bumpStrategy = bumpStrategyInput as BumpStrategy;
+  const isStringTokenStrategy = bumpStrategy === 'string-token';
+
+  // Deliberately no `default:` in action.yml for these: `core.getInput` cannot
+  // tell a caller-supplied value from a declared default, so the "you set a
+  // token but not the strategy" warning below would fire on every single
+  // conventional-commits run if the defaults were declared there.
+  const rawStringTokens = {
+    major: core.getInput('major_string_token'),
+    minor: core.getInput('minor_string_token'),
+    patch: core.getInput('patch_string_token'),
+    none: core.getInput('none_string_token'),
+  };
+  const stringTokens = {
+    major: rawStringTokens.major || DEFAULT_STRING_TOKENS.major,
+    minor: rawStringTokens.minor || DEFAULT_STRING_TOKENS.minor,
+    patch: rawStringTokens.patch || DEFAULT_STRING_TOKENS.patch,
+    none: rawStringTokens.none || DEFAULT_STRING_TOKENS.none,
+  };
+
+  if (!isStringTokenStrategy && Object.values(rawStringTokens).some(Boolean)) {
+    core.warning(
+      'String token inputs are ignored unless bump_strategy is set to string-token.',
+    );
+  }
+
+  const tokenMatchModeInput = core.getInput('token_match_mode') || 'word';
+  let tokenMatchMode: TokenMatchMode = 'word';
+  if ((TOKEN_MATCH_MODES as readonly string[]).includes(tokenMatchModeInput)) {
+    tokenMatchMode = tokenMatchModeInput as TokenMatchMode;
+  } else {
+    core.warning(
+      `${tokenMatchModeInput} is not a valid token_match_mode. Falling back to word.`,
+    );
+  }
 
   if (tagMessage && !createAnnotatedTag) {
     core.warning(
@@ -113,7 +177,15 @@ export default async function main() {
     .split(',')
     .some((branch) => currentBranch.match(branch));
   const isPullRequest = isPr(GITHUB_REF);
-  const isPrerelease = !isReleaseBranch && !isPullRequest && isPreReleaseBranch;
+  // An explicit `pre_release` wins outright; leaving it unset keeps the
+  // branch-derived behaviour. Note this only decides whether the *version* is a
+  // prerelease - the "neither a release nor a pre-release branch" guard further
+  // down still uses the branch matches.
+  const preReleaseInput = core.getInput('pre_release');
+  const isPrerelease =
+    preReleaseInput !== ''
+      ? /true/i.test(preReleaseInput)
+      : !isReleaseBranch && !isPullRequest && isPreReleaseBranch;
 
   const commitRangeOptions = {
     gitCwd,
@@ -166,7 +238,14 @@ export default async function main() {
   } else {
     let previousTag: ReturnType<typeof getLatestTag> | null;
     let previousVersion: SemVer | null;
-    if (!latestPrereleaseTag) {
+    if (isStringTokenStrategy) {
+      // entrypoint.sh always computes the bump off the stable tag and treats the
+      // prerelease tag purely as a continue-or-restart switch (applied further
+      // down). Selecting max(stable, prerelease) here instead - as the
+      // conventional-commits path does - would increment from the prerelease
+      // version and produce e.g. 1.4.2-RC.0 where legacy produces 1.4.1-RC.4.
+      previousTag = latestTag;
+    } else if (!latestPrereleaseTag) {
       previousTag = latestTag;
     } else {
       previousTag = gte(
@@ -194,14 +273,35 @@ export default async function main() {
     core.setOutput('previous_tag', previousTag.name);
     const previousWasPrerelease = previousVersion.prerelease.length != 0;
 
-    commits = await getCommits(
-      previousTag.commit.sha,
-      commitRef,
-      commitRangeOptions,
-    );
+    if (
+      isStringTokenStrategy &&
+      previousTag.commit.sha === NO_PREVIOUS_TAG_SHA
+    ) {
+      // No tag matches this prefix yet. legacy's range is
+      // `git log <empty>..<sha>`, which git reads as HEAD..HEAD and is empty, so
+      // the first tag of a new prefixed lineage always comes from default_bump.
+      // Falling through to the API here would walk the entire repo history and
+      // let an unrelated historical `#major` mint e.g. web-app_1.0.0 instead of
+      // web-app_0.0.1.
+      core.info(
+        'No previous tag for this prefix; treating the commit range as empty.',
+      );
+      commits = [];
+    } else {
+      commits = await getCommits(previousTag.commit.sha, commitRef, {
+        ...commitRangeOptions,
+        skipClosedPrFallback: isStringTokenStrategy,
+      });
+    }
     core.debug('We found ' + commits.length + ' commits to consider!');
 
-    if (scopes.length) {
+    if (scopes.length && isStringTokenStrategy) {
+      // The scope filter parses commits as conventional commits and drops
+      // everything that isn't one, which would starve the token matcher.
+      core.warning(
+        'scopes is not supported with bump_strategy: string-token and is ignored.',
+      );
+    } else if (scopes.length) {
       const commitParser = new CommitParser();
       const isInScope = (scope: string) =>
         scopes.split(',').some((includedScope) => scope.match(includedScope));
@@ -218,91 +318,161 @@ export default async function main() {
       });
     }
 
-    const isDefaultCommitAnalyzerPreset =
-      commitAnalyzerPreset.toLowerCase() === 'angular';
+    if (isStringTokenStrategy) {
+      const tokenResult: StringTokenResult = analyzeCommitsByStringToken(
+        commits,
+        stringTokens,
+        tokenMatchMode,
+      );
+      const stableVersion = latestTag.name.replace(prefixRegex, '');
 
-    const analyzeCommitsContext = {
-      commits,
-      logger: { log: console.info.bind(console) },
-      cwd: process.cwd(),
-    };
+      // A `none` token always skips, and it does so before any force override is
+      // considered - legacy has no force concept and the shim never sets one. A
+      // range with no token at all falls back to default_bump, unless that is
+      // itself a skip sentinel (`false` here; `none` in the legacy interface,
+      // accepted too so a stray legacy value can't reach semver.inc()).
+      if (
+        tokenResult.kind === 'none' ||
+        (tokenResult.kind === 'no-match' &&
+          (defaultBump === 'false' || String(defaultBump) === 'none'))
+      ) {
+        core.info(
+          'No commit specifies the version bump. Skipping the tag creation.',
+        );
+        core.setOutput('release_type', 'none');
+        // legacy never leaves new_tag empty - every skip path echoes the existing
+        // tag, so a consumer feeding it into an image tag always has a value.
+        // It echoes the *stable* tag even on a prerelease run, because legacy's
+        // `#none` arm fires before its prerelease block.
+        core.setOutput('new_version', stableVersion);
+        core.setOutput('new_tag', latestTag.name);
+        return;
+      }
 
-    let bump = await analyzeCommits(
-      {
-        ...(isDefaultCommitAnalyzerPreset
-          ? {}
-          : { preset: commitAnalyzerPreset }),
-        releaseRules: mappedReleaseRules
-          ? // analyzeCommits doesn't appreciate rules with a section /shrug
-            mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
-          : undefined,
-      },
-      analyzeCommitsContext,
-    );
+      const part = (
+        tokenResult.kind === 'bump' ? tokenResult.bump : defaultBump
+      ) as ReleaseType;
 
-    // Determine if we should continue with tag creation based on main vs prerelease branch
-    let shouldContinue = true;
-    if (isPrerelease) {
-      if (!bump && !previousWasPrerelease && defaultDraftBump === 'false')
-        shouldContinue = false;
-      if (!bump && defaultPreReleaseBump === 'false') {
-        shouldContinue = false;
+      if (isPrerelease) {
+        const target = inc(stableVersion, part);
+        if (!target) {
+          throw new Error('Could not increment version.');
+        }
+        const previousPrereleaseName = latestPrereleaseTag?.name;
+        // Mirrors legacy's
+        // `[[ "$pre_tag" =~ $new ]] && [[ "$pre_tag" =~ $suffix ]]`: continue the
+        // existing prerelease series only when it is already working towards this
+        // same target version with this same identifier, otherwise start a fresh
+        // one at `.0` (not `.1`).
+        const continuesExistingPrerelease =
+          !!previousPrereleaseName &&
+          previousPrereleaseName.includes(target) &&
+          previousPrereleaseName.includes(identifier);
+
+        newVersion = continuesExistingPrerelease
+          ? (inc(
+              previousPrereleaseName.replace(prefixRegex, ''),
+              'prerelease',
+              identifier,
+            ) ?? '')
+          : `${target}-${identifier}.0`;
+
+        core.setOutput('release_type', `pre${part}`);
+      } else {
+        newVersion = inc(stableVersion, part) ?? '';
+        core.setOutput('release_type', part);
+      }
+
+      if (!newVersion || !valid(newVersion)) {
+        throw new Error(`${newVersion} is not a valid semver.`);
       }
     } else {
-      if (!bump && defaultBump === 'false') {
-        shouldContinue = false;
-      }
-    }
+      const isDefaultCommitAnalyzerPreset =
+        commitAnalyzerPreset.toLowerCase() === 'angular';
 
-    // Determine if we should override the bump to a given `force` version
-    if (isPrerelease && forcePreReleaseBump !== '') {
-      bump = forcePreReleaseBump;
-    }
-    if (!isPrerelease && forceBump !== '') {
-      bump = forceBump;
-    }
+      const analyzeCommitsContext = {
+        commits,
+        logger: { log: console.info.bind(console) },
+        cwd: process.cwd(),
+      };
 
-    // Default bump is set to false and we did not find an automatic bump
-    if (!shouldContinue) {
-      core.debug(
-        'No commit specifies the version bump. Skipping the tag creation.',
+      let bump = await analyzeCommits(
+        {
+          ...(isDefaultCommitAnalyzerPreset
+            ? {}
+            : { preset: commitAnalyzerPreset }),
+          releaseRules: mappedReleaseRules
+            ? // analyzeCommits doesn't appreciate rules with a section /shrug
+              mappedReleaseRules.map(({ section, ...rest }) => ({ ...rest }))
+            : undefined,
+        },
+        analyzeCommitsContext,
       );
-      return;
+
+      // Determine if we should continue with tag creation based on main vs prerelease branch
+      let shouldContinue = true;
+      if (isPrerelease) {
+        if (!bump && !previousWasPrerelease && defaultDraftBump === 'false')
+          shouldContinue = false;
+        if (!bump && defaultPreReleaseBump === 'false') {
+          shouldContinue = false;
+        }
+      } else {
+        if (!bump && defaultBump === 'false') {
+          shouldContinue = false;
+        }
+      }
+
+      // Determine if we should override the bump to a given `force` version
+      if (isPrerelease && forcePreReleaseBump !== '') {
+        bump = forcePreReleaseBump;
+      }
+      if (!isPrerelease && forceBump !== '') {
+        bump = forceBump;
+      }
+
+      // Default bump is set to false and we did not find an automatic bump
+      if (!shouldContinue) {
+        core.debug(
+          'No commit specifies the version bump. Skipping the tag creation.',
+        );
+        return;
+      }
+
+      // If we don't have an automatic bump for the prerelease, just set our bump as the default
+      if (isPrerelease && !bump) {
+        if (!previousWasPrerelease)
+          // previous version is a prerelease -> draft a new version with the default bump and make it a prerelease
+          bump = defaultDraftBump;
+        else bump = defaultPreReleaseBump;
+      }
+
+      // `bump` can already carry a 'pre' prefix here (e.g. 'preminor' from a
+      // custom release rule or default_prerelease_bump), but a prerelease
+      // branch always gets exactly one 'pre' prefix added below - strip any
+      // that are already there first, so the result is 'preminor' rather
+      // than 'preprepatch'/'prepreminor'.
+      if (isPrerelease) {
+        bump = bump.replace(/^(pre)+/, '');
+      }
+
+      const releaseType: ReleaseType = isPrerelease
+        ? `pre${bump}`
+        : bump || defaultBump;
+      core.setOutput('release_type', releaseType);
+
+      const incrementedVersion = inc(previousVersion, releaseType, identifier);
+
+      if (!incrementedVersion) {
+        throw new Error('Could not increment version.');
+      }
+
+      if (!valid(incrementedVersion)) {
+        throw new Error(`${incrementedVersion} is not a valid semver.`);
+      }
+
+      newVersion = incrementedVersion;
     }
-
-    // If we don't have an automatic bump for the prerelease, just set our bump as the default
-    if (isPrerelease && !bump) {
-      if (!previousWasPrerelease)
-        // previous version is a prerelease -> draft a new version with the default bump and make it a prerelease
-        bump = defaultDraftBump;
-      else bump = defaultPreReleaseBump;
-    }
-
-    // `bump` can already carry a 'pre' prefix here (e.g. 'preminor' from a
-    // custom release rule or default_prerelease_bump), but a prerelease
-    // branch always gets exactly one 'pre' prefix added below - strip any
-    // that are already there first, so the result is 'preminor' rather
-    // than 'preprepatch'/'prepreminor'.
-    if (isPrerelease) {
-      bump = bump.replace(/^(pre)+/, '');
-    }
-
-    const releaseType: ReleaseType = isPrerelease
-      ? `pre${bump}`
-      : bump || defaultBump;
-    core.setOutput('release_type', releaseType);
-
-    const incrementedVersion = inc(previousVersion, releaseType, identifier);
-
-    if (!incrementedVersion) {
-      throw new Error('Could not increment version.');
-    }
-
-    if (!valid(incrementedVersion)) {
-      throw new Error(`${incrementedVersion} is not a valid semver.`);
-    }
-
-    newVersion = incrementedVersion;
   }
 
   core.info(`New version is ${newVersion}.`);

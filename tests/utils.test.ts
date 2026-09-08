@@ -296,10 +296,14 @@ describe('utils', () => {
       expect(commits).toEqual([]);
     });
 
+    // These fixtures use the real `push` webhook payload shape - `{ id, message }`
+    // with no nested `.commit`. They previously used an API-shaped
+    // `{ sha, commit: { message } }`, which masked a bug: the code read
+    // `commit.commit.message` and would throw on a real payload.
     it('falls back to the closed-PR commit list when the compare range is empty and the payload has one', async () => {
       getCommitRangeMock.mockResolvedValue([]);
       mockContext.payload = {
-        commits: [{ sha: 'closed-pr-sha', commit: { message: 'fix: y' } }],
+        commits: [{ id: 'closed-pr-sha', message: 'fix: y' }],
       };
 
       const commits = await utils.getCommits('base', 'head');
@@ -311,10 +315,37 @@ describe('utils', () => {
       getCommitRangeMock.mockResolvedValue([]);
       mockContext.payload = {
         pull_request: {},
-        commits: [{ sha: 'closed-pr-sha', commit: { message: 'fix: y' } }],
+        commits: [{ id: 'closed-pr-sha', message: 'fix: y' }],
       };
 
       const commits = await utils.getCommits('base', 'head');
+
+      expect(commits).toEqual([]);
+    });
+
+    it('skips payload commits with no message', async () => {
+      getCommitRangeMock.mockResolvedValue([]);
+      mockContext.payload = {
+        commits: [
+          { id: 'a', message: '' },
+          { id: 'b', message: 'fix: kept' },
+        ],
+      };
+
+      const commits = await utils.getCommits('base', 'head');
+
+      expect(commits).toEqual([{ message: 'fix: kept', hash: 'b' }]);
+    });
+
+    it('does not use the closed-PR commit list when skipClosedPrFallback is set', async () => {
+      getCommitRangeMock.mockResolvedValue([]);
+      mockContext.payload = {
+        commits: [{ id: 'closed-pr-sha', message: 'fix: y' }],
+      };
+
+      const commits = await utils.getCommits('base', 'head', {
+        skipClosedPrFallback: true,
+      });
 
       expect(commits).toEqual([]);
     });
