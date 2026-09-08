@@ -54,6 +54,7 @@ jobs:
 - **force_bump** _(optional)_ - If specified, it ignores the type of bump provided when committing to a release branch, as well as `default_bump`. You can also set `false` to avoid generating a new tag. Can be `patch, minor or major`.
 - **force_prerelease_bump** _(optional)_ - If specified, it ignores the type of bump provided when committing to a release branch, as well as `default_bump`. You can also set `false` to avoid generating a new tag. Can be `prerelease, prepatch, preminor or premajor`.
 - **custom_tag** _(optional)_ - Custom tag name. If specified, it overrides bump settings.
+- **force_update** _(optional)_ - Updates the sha of a tag if it already exists (default: `false`).
 - **create_annotated_tag** _(optional)_ - Boolean to create an annotated rather than a lightweight one (default: `false`).
 - **tag_prefix** _(optional)_ - A prefix to the tag name (default: `v`).
 - **tag_search_pattern** _(optional)_ - A glob pattern to filter tags to consider for version bumping (e.g. `v0.*`). Useful for projects with multiple major versions supported simultaneously with different root commits.
@@ -78,6 +79,7 @@ jobs:
 #### Debugging
 
 - **dry_run** _(optional)_ - Do not perform tagging, just calculate next version and changelog, then exit
+- **soft_fail** _(optional)_ - If true, an unrecoverable error (after retries/fallbacks) is reported as a warning and the step exits successfully without creating a tag, instead of failing the job (default: `false`).
 
 ### 📤 Outputs
 
@@ -87,6 +89,7 @@ jobs:
 - **previous_version** - The value of the previous tag (or `0.0.0` if none) without the prefix. Note that if `custom_tag` is set, this will be `undefined`.
 - **release_type** - The computed release type (`major`, `minor`, `patch` or `custom` - can be prefixed with `pre`).
 - **changelog** - The [conventional changelog](https://github.com/conventional-changelog/conventional-changelog) since the previous tag.
+- **tag_created** - Whether a tag was actually created/pushed (`true`/`false`). Other outputs (`new_tag`, `new_version`, etc.) may be populated even when this is `false` (e.g. `dry_run`, or a `soft_fail`'d error) - check this output before acting on them.
 
 > **_Note:_** This action creates a [lightweight tag](https://developer.github.com/v3/git/refs/#create-a-reference) by default.
 
