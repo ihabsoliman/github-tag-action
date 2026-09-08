@@ -21,6 +21,12 @@ jest.unstable_mockModule('../src/github.js', () => ({
   listMergedTags: listMergedTagsMock,
 }));
 
+const mockContext: { payload: Record<string, unknown> } = { payload: {} };
+
+jest.unstable_mockModule('@actions/github', () => ({
+  context: mockContext,
+}));
+
 const utils = await import('../src/utils.js');
 const { getValidTags } = utils;
 const { defaultChangelogRules } = await import('../src/defaults.js');
@@ -45,6 +51,7 @@ describe('utils', () => {
     listMergedTagsMock.mockReset();
     warningMock.mockReset();
     getCommitRangeMock.mockResolvedValue([]);
+    mockContext.payload = {};
   });
 
   it('extracts branch from ref', () => {
@@ -277,6 +284,38 @@ describe('utils', () => {
         branchHistory: 'full',
       });
       expect(commits).toEqual([{ message: 'feat: thing', hash: 'abc' }]);
+    });
+
+    it('returns an empty array (not a crash) when there are no commits and the event payload has no commits array (e.g. workflow_dispatch)', async () => {
+      getCommitRangeMock.mockResolvedValue([]);
+      mockContext.payload = {};
+
+      const commits = await utils.getCommits('base', 'head');
+
+      expect(commits).toEqual([]);
+    });
+
+    it('falls back to the closed-PR commit list when the compare range is empty and the payload has one', async () => {
+      getCommitRangeMock.mockResolvedValue([]);
+      mockContext.payload = {
+        commits: [{ sha: 'closed-pr-sha', commit: { message: 'fix: y' } }],
+      };
+
+      const commits = await utils.getCommits('base', 'head');
+
+      expect(commits).toEqual([{ message: 'fix: y', hash: 'closed-pr-sha' }]);
+    });
+
+    it('does not use the closed-PR commit list in a pull_request event context', async () => {
+      getCommitRangeMock.mockResolvedValue([]);
+      mockContext.payload = {
+        pull_request: {},
+        commits: [{ sha: 'closed-pr-sha', commit: { message: 'fix: y' } }],
+      };
+
+      const commits = await utils.getCommits('base', 'head');
+
+      expect(commits).toEqual([]);
     });
   });
 

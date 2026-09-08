@@ -104,7 +104,10 @@ export async function getCommits(
 
 function getClosedPRCommits() {
   let commits = Array<FinalCommit>();
-  if (!('pull_request' in context.payload)) {
+  if (
+    !('pull_request' in context.payload) &&
+    Array.isArray(context.payload.commits)
+  ) {
     core.debug('We are in a closed PR context continuing.');
     core.debug(JSON.stringify(context.payload.commits));
     let pr_commit_count = context.payload.commits.length;
