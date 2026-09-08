@@ -1,18 +1,30 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
-const listTagsMock = jest.fn();
-const compareCommitsMock = jest.fn();
-const listCommitsMock = jest.fn();
-const paginateMock = jest.fn();
-const getCommitMock = jest.fn();
-const createTagMock = jest.fn();
-const updateRefMock = jest.fn();
-const createRefMock = jest.fn();
-const execMock = jest.fn();
+/*
+ * `jest.fn()` with no type argument is typed `Mock<UnknownFunction>`, whose
+ * parameter and resolved types collapse to `never` - which makes
+ * `mockResolvedValue(...)`, `mockRejectedValue(...)` and
+ * `mockImplementation(...)` reject every argument. These mocks stand in for
+ * module and API shapes we deliberately do not model exactly (the fixtures are
+ * partial on purpose), so give them a permissive signature instead of widening
+ * every fixture to a full API type.
+ */
+type LooseFn = (...args: any[]) => any;
+const mockFn = () => jest.fn<LooseFn>();
+
+const listTagsMock = mockFn();
+const compareCommitsMock = mockFn();
+const listCommitsMock = mockFn();
+const paginateMock = mockFn();
+const getCommitMock = mockFn();
+const createTagMock = mockFn();
+const updateRefMock = mockFn();
+const createRefMock = mockFn();
+const execMock = mockFn();
 
 jest.unstable_mockModule('@actions/github', () => ({
   context: { repo: { owner: 'mock-owner', repo: 'mock-repo' } },
-  getOctokit: jest.fn().mockReturnValue({
+  getOctokit: mockFn().mockReturnValue({
     paginate: paginateMock,
     rest: {
       repos: {
