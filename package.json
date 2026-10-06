@@ -41,17 +41,17 @@
   },
   "devDependencies": {
     "@octokit/rest": "^22.0.1",
-    "@swc/core": "^1.16.2",
+    "@swc/core": "^1.16.13",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^24.13.6",
+    "@types/node": "^24.19.1",
     "@types/semver": "^7.8.0",
     "esbuild": "^0.28.2",
     "jest": "^30.5.2",
     "jest-circus": "^30.5.1",
     "js-yaml": "^5.4.2",
-    "prettier": "3.9.8",
+    "prettier": "3.9.9",
     "typescript": "^7.0.2"
   }
 }
