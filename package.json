@@ -53,5 +53,9 @@
     "js-yaml": "^5.4.3",
     "prettier": "3.9.10",
     "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "minimatch": "$minimatch",
+    "glob": "^14.0.6"
   }
 }
