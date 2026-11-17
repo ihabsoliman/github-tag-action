@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@octokit/rest": "^22.0.1",
-    "@swc/core": "^1.16.18",
+    "@swc/core": "^1.16.22",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
@@ -50,8 +50,8 @@
     "esbuild": "^0.28.2",
     "jest": "^30.5.2",
     "jest-circus": "^30.5.1",
-    "js-yaml": "^5.4.3",
-    "prettier": "3.9.10",
+    "js-yaml": "^5.5.0",
+    "prettier": "3.10.1",
     "typescript": "^7.0.2"
   },
   "overrides": {
